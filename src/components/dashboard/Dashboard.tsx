@@ -4,14 +4,16 @@
 import React from 'react';
 import { useAppState } from '../../store/AppContext';
 import { MetricCard, EmptyState, DataImportPrompt, StatusBadge } from '../common';
+import { MarketMovers } from './MarketMovers';
 import { formatPrice, formatPercent, formatDate, formatVolume, getChangeColor } from '../../utils/formatters';
 import { Database, TrendingUp, AlertTriangle, FileText, BarChart3, Activity } from 'lucide-react';
 
 interface DashboardProps {
   onNavigate: (page: string) => void;
+  onSelectStock?: (symbol: string) => void;
 }
 
-export function Dashboard({ onNavigate }: DashboardProps) {
+export function Dashboard({ onNavigate, onSelectStock }: DashboardProps) {
   const { state } = useAppState();
   const datasets = Array.from(state.datasets.values());
 
@@ -22,6 +24,14 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const totalRecords = datasets.reduce((sum, d) => sum + d.info.recordCount, 0);
   const totalAnomalies = Array.from(state.anomalies.values()).reduce((sum, a) => sum + a.length, 0);
   const latestDataset = datasets[datasets.length - 1];
+
+  const handleSelectStock = (symbol: string) => {
+    if (onSelectStock) {
+      onSelectStock(symbol);
+    } else {
+      onNavigate('explore');
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -52,6 +62,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           subtitle="Tracked instruments"
         />
       </div>
+
+      {/* Market Movers */}
+      <MarketMovers onSelectStock={handleSelectStock} />
 
       {/* Recent Datasets */}
       <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl">

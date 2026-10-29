@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { 
   LayoutDashboard, Search, LineChart, FlaskConical, AlertTriangle, 
-  FileText, Star, Settings, Menu, X, ChevronRight, Database, TrendingUp
+  FileText, Star, Settings, Menu, X, ChevronRight, Database, TrendingUp, Filter
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -15,6 +15,7 @@ interface AppShellProps {
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'screener', label: 'Stock Screener', icon: Filter },
   { id: 'explore', label: 'Stock Explorer', icon: Search },
   { id: 'analysis', label: 'Analysis', icon: LineChart },
   { id: 'forecast', label: 'Forecasting', icon: TrendingUp },

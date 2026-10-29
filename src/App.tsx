@@ -14,6 +14,7 @@ import { ReportsPage } from './components/reports/ReportsPage';
 import { WatchlistPage } from './components/watchlist/WatchlistPage';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { DataImportPage } from './components/data/DataImportPage';
+import { StockScreener } from './components/screener/StockScreener';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -36,7 +37,7 @@ function AppContent() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard onNavigate={handleNavigate} />;
+        return <Dashboard onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
       case 'explore':
         return <StockExplorer onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
       case 'analysis':
@@ -54,12 +55,14 @@ function AppContent() {
         return <ReportsPage onNavigate={handleNavigate} />;
       case 'watchlist':
         return <WatchlistPage onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
+      case 'screener':
+        return <StockScreener onSelectStock={handleSelectStock} onNavigate={handleNavigate} />;
       case 'data':
         return <DataImportPage />;
       case 'settings':
         return <SettingsPage />;
       default:
-        return <Dashboard onNavigate={handleNavigate} />;
+        return <Dashboard onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
     }
   };
 
