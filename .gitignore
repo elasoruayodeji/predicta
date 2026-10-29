@@ -3,18 +3,12 @@ node_modules/
 dist/
 build/
 *.log
-
-# Environment variables (NEVER commit secrets)
 .env
-.env.local
-.env.production
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+.env
+.env.*
+!.env.example
 
-# OS
-.DS_Store
-Thumbs.db
+.env
+.env.*
+!.env.example
