@@ -2,8 +2,7 @@
 // Forecasting Models
 // ============================================================
 import { ModelType, ModelDefinition, ModelMetrics, PriceRecord } from '../types';
-import { buildFeatures, standardizeFeatures } from './features';
-import { calculateReturns } from './statistics';
+import { buildFeatures, standardizeFeatures, buildSinglePointFeatures } from './features';
 
 export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
@@ -423,31 +422,17 @@ export function generateForecast(
 
   const metrics = calculateMetrics(valPredictions, valTargets, baselinePredictions);
 
-  // Generate forecast for the latest available data
-  // Build features for the last point
-  const lastMatrix = buildFeatures(prices.slice(0, prices.length - horizon + 1), 1);
+  // Generate forecast for the LATEST available data point.
+  // buildFeatures excludes the last `horizon` points (no targets available),
+  // so we build a feature row for the last point using buildSinglePointFeatures.
   let forecastPrediction = 0;
-
-  if (lastMatrix.features.length > 0) {
-    const lastFeatures = lastMatrix.features[lastMatrix.features.length - 1];
-    // Standardize using training statistics
-    const nF = lastFeatures.length;
-    const means = new Array(nF).fill(0);
-    const stds = new Array(nF).fill(1);
-    for (const row of trainFeatures) {
-      for (let j = 0; j < nF; j++) means[j] += row[j];
+  const lastFeatures = buildSinglePointFeatures(prices, prices.length - 1);
+  
+  if (lastFeatures) {
+    const { test: stdLast } = standardizeFeatures(trainFeatures, [lastFeatures]);
+    if (stdLast && stdLast.length > 0) {
+      forecastPrediction = model.predict(stdLast[0]);
     }
-    for (let j = 0; j < nF; j++) means[j] /= trainFeatures.length;
-    for (const row of trainFeatures) {
-      for (let j = 0; j < nF; j++) stds[j] += Math.pow(row[j] - means[j], 2);
-    }
-    for (let j = 0; j < nF; j++) {
-      stds[j] = Math.sqrt(stds[j] / (trainFeatures.length - 1));
-      if (stds[j] < 1e-10) stds[j] = 1;
-    }
-
-    const stdLast = lastFeatures.map((v, j) => (v - means[j]) / stds[j]);
-    forecastPrediction = model.predict(stdLast);
   }
 
   const trainingTimeMs = performance.now() - start;

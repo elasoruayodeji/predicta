@@ -170,13 +170,15 @@ function parseCSVLine(line: string): string[] {
 }
 
 /**
- * Generate a sample CSV for demonstration purposes
+ * Generate a SYNTHETIC sample CSV for demonstration purposes ONLY.
+ * This data is NOT real market data. It is generated using Math.random()
+ * and must never be presented as actual stock prices or used for investment decisions.
  */
 export function generateSampleCSV(): string {
   const headers = 'Date,Open,High,Low,Close,Volume';
   const lines = [headers];
   
-  // Generate realistic-looking sample data (clearly synthetic)
+  // SYNTHETIC DATA — generated with Math.random(), NOT real market prices
   let price = 150;
   const startDate = new Date('2020-01-02');
   

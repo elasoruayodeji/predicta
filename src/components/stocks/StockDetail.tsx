@@ -119,6 +119,11 @@ export function StockDetail({ symbol, onBack, onNavigate }: StockDetailProps) {
               <span className="text-xs px-2 py-0.5 rounded bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">
                 {info.exchange}
               </span>
+              {info.symbol.includes('SYNTHETIC') && (
+                <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-warning-dim)] text-[var(--color-warning)] font-bold uppercase">
+                  Synthetic Data — Not Real Prices
+                </span>
+              )}
             </div>
             <p className="text-sm text-[var(--color-text-muted)]">{info.name}</p>
           </div>

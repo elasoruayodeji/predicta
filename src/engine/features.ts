@@ -168,7 +168,7 @@ export function standardizeFeatures(
 ): { train: number[][]; test?: number[][]; means: number[]; stds: number[] } {
   const nFeatures = trainFeatures[0]?.length ?? 0;
   const means: number[] = new Array(nFeatures).fill(0);
-  const stds: number[] = new Array(nFeatures).fill(1);
+  const stds: number[] = new Array(nFeatures).fill(0);
 
   // Calculate means
   for (const row of trainFeatures) {
@@ -204,4 +204,96 @@ export function standardizeFeatures(
   }
 
   return { train, test, means, stds };
+}
+
+/**
+ * Build a feature vector for a SINGLE point at index `idx` in the prices array.
+ * Uses ONLY data available at or before `idx` — no future information.
+ * This is used for generating live forecasts where no target exists.
+ * Returns null if insufficient history.
+ */
+export function buildSinglePointFeatures(prices: PriceRecord[], idx: number): number[] | null {
+  if (idx < 50 || idx >= prices.length) return null;
+
+  const returns = calculateReturns(prices);
+  const returnIdx = idx - 1;
+  if (returnIdx < 0 || returnIdx >= returns.length) return null;
+
+  const row: number[] = [];
+
+  // 1. Lagged returns (5 lags)
+  for (let lag = 1; lag <= 5; lag++) {
+    const i = returnIdx - lag + 1;
+    row.push(i >= 0 && i < returns.length ? returns[i] : 0);
+  }
+
+  // 2. Rolling mean returns (5, 10, 20)
+  for (const window of [5, 10, 20]) {
+    let sum = 0, count = 0;
+    for (let j = returnIdx - window + 1; j <= returnIdx; j++) {
+      if (j >= 0 && j < returns.length) { sum += returns[j]; count++; }
+    }
+    row.push(count > 0 ? sum / count : 0);
+  }
+
+  // 3. Rolling volatility (5, 10, 20)
+  for (const window of [5, 10, 20]) {
+    const wReturns: number[] = [];
+    for (let j = returnIdx - window + 1; j <= returnIdx; j++) {
+      if (j >= 0 && j < returns.length) wReturns.push(returns[j]);
+    }
+    if (wReturns.length > 1) {
+      const mean = wReturns.reduce((a, b) => a + b, 0) / wReturns.length;
+      const variance = wReturns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / (wReturns.length - 1);
+      row.push(Math.sqrt(variance));
+    } else {
+      row.push(0);
+    }
+  }
+
+  // 4. Volume change (1-day)
+  if (idx > 0 && prices[idx - 1].volume > 0) {
+    row.push((prices[idx].volume - prices[idx - 1].volume) / prices[idx - 1].volume);
+  } else {
+    row.push(0);
+  }
+
+  // 5. Volume ratio (5-day avg vs current)
+  let volSum = 0, volCount = 0;
+  for (let j = idx - 5; j < idx; j++) {
+    if (j >= 0) { volSum += prices[j].volume; volCount++; }
+  }
+  const avgVol5 = volCount > 0 ? volSum / volCount : prices[idx].volume;
+  row.push(avgVol5 > 0 ? prices[idx].volume / avgVol5 : 1);
+
+  // 6. Price to MA20
+  let ma20Sum = 0, ma20Count = 0;
+  for (let j = idx - 19; j <= idx; j++) {
+    if (j >= 0) { ma20Sum += prices[j].close; ma20Count++; }
+  }
+  const ma20 = ma20Count > 0 ? ma20Sum / ma20Count : prices[idx].close;
+  row.push(ma20 > 0 ? (prices[idx].close / ma20) - 1 : 0);
+
+  // 7. Price to MA50
+  let ma50Sum = 0, ma50Count = 0;
+  for (let j = idx - 49; j <= idx; j++) {
+    if (j >= 0) { ma50Sum += prices[j].close; ma50Count++; }
+  }
+  const ma50 = ma50Count > 0 ? ma50Sum / ma50Count : prices[idx].close;
+  row.push(ma50 > 0 ? (prices[idx].close / ma50) - 1 : 0);
+
+  // 8. Momentum (5, 10, 20 day returns)
+  for (const p of [5, 10, 20]) {
+    const prevIdx = idx - p;
+    if (prevIdx >= 0 && prices[prevIdx].close > 0) {
+      row.push((prices[idx].close / prices[prevIdx].close) - 1);
+    } else {
+      row.push(0);
+    }
+  }
+
+  // 9. High-low range (normalized)
+  row.push(prices[idx].close > 0 ? (prices[idx].high - prices[idx].low) / prices[idx].close : 0);
+
+  return row;
 }

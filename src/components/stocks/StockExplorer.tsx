@@ -110,7 +110,14 @@ export function StockExplorer({ onNavigate, onSelectStock }: StockExplorerProps)
 
   const handleLoadSample = () => {
     const csv = generateSampleCSV();
-    processCSV(csv, 'SAMPLE_DEMO');
+    processCSV(csv, 'SYNTHETIC_DEMO');
+    // The processCSV function will set warnings; we add synthetic data notice
+    setTimeout(() => {
+      setImportWarnings(prev => [
+        'SYNTHETIC DATA: This is randomly generated demonstration data, NOT real market prices. Do not use for investment decisions.',
+        ...prev,
+      ]);
+    }, 0);
   };
 
   return (
@@ -217,6 +224,11 @@ export function StockExplorer({ onNavigate, onSelectStock }: StockExplorerProps)
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">
                           {ds.info.exchange}
                         </span>
+                        {ds.info.symbol.includes('SYNTHETIC') && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-warning-dim)] text-[var(--color-warning)] font-bold">
+                            SYNTHETIC
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-[var(--color-text-muted)]">{ds.info.name}</p>
                     </div>

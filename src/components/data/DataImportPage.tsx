@@ -95,7 +95,14 @@ export function DataImportPage() {
 
   const handleLoadSample = () => {
     const csv = generateSampleCSV();
-    processCSV(csv, 'SAMPLE_DEMO');
+    processCSV(csv, 'SYNTHETIC_DEMO');
+    // Add synthetic data warning
+    setTimeout(() => {
+      setImportWarnings(prev => [
+        'SYNTHETIC DATA: This is randomly generated demonstration data, NOT real market prices. Do not use for investment decisions. Import real CSV data for actual analysis.',
+        ...prev,
+      ]);
+    }, 0);
   };
 
   const handleRemoveDataset = (symbol: string) => {

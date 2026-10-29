@@ -105,12 +105,16 @@ export function walkForwardBacktest(
     const foldBaseline = stdTest ? stdTest.map(f => baselineModel.predict(f)) : [];
     const foldMetrics = calculateMetrics(foldPreds, foldActuals, foldBaseline);
 
+    // Use actual test dates from the feature matrix (not the raw price dates)
+    const actualTestStart = testMatrix.dates.length > 0 ? testMatrix.dates[0] : testPrices[0].date;
+    const actualTestEnd = testMatrix.dates.length > 0 ? testMatrix.dates[testMatrix.dates.length - 1] : testPrices[testPrices.length - 1].date;
+
     folds.push({
       foldIndex,
       trainingStart: trainingPrices[0].date,
       trainingEnd: trainingPrices[trainingPrices.length - 1].date,
-      testStart: testPrices[0].date,
-      testEnd: testPrices[Math.min(testPrices.length - 1, testEnd - trainingStart)].date,
+      testStart: actualTestStart,
+      testEnd: actualTestEnd,
       metrics: foldMetrics,
     });
 
