@@ -72,6 +72,7 @@ export interface ForecastResult {
   lowerBound: number;
   upperBound: number;
   confidenceLevel: number;
+  intervalNote: string; // Honest description of interval limitations
   metrics: ModelMetrics;
   status: 'valid' | 'experimental' | 'insufficient_data' | 'failed_validation';
   warnings: string[];

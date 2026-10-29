@@ -37,6 +37,7 @@ export function runForecast(
       lowerBound: 0,
       upperBound: 0,
       confidenceLevel: 0.95,
+      intervalNote: 'Approximate interval based on ±1.96σ of residuals. Assumes normal distribution of errors, which is often violated for financial returns.',
       metrics: { mae: 0, rmse: 0, directionalAccuracy: 0, baselineImprovement: 0, predictionIntervalCoverage: 0, trainingTimeMs: 0 },
       status: 'insufficient_data',
       warnings: [`Insufficient data: ${effectivePrices.length} records available, ${modelDef.minDataPoints} required`],
@@ -52,9 +53,14 @@ export function runForecast(
   const lastPrice = effectivePrices[effectivePrices.length - 1].adjustedClose ?? effectivePrices[effectivePrices.length - 1].close;
   const estimatedPrice = lastPrice * (1 + result.prediction);
 
-  // Calculate uncertainty bounds based on historical residual std
+  // Calculate APPROXIMATE uncertainty bounds based on historical residual std.
+  // IMPORTANT: These are NOT statistically rigorous 95% prediction intervals.
+  // They assume residuals are approximately normally distributed, which is often
+  // not true for financial returns (fat tails, skewness, volatility clustering).
+  // The empirical coverage from backtesting should be used to calibrate these.
+  // We label them as "approximate" to avoid misleading users.
   const residualStd = result.metrics.rmse;
-  const zScore = 1.96; // 95% confidence
+  const zScore = 1.96;
   const lowerBound = lastPrice * (1 + result.prediction - zScore * residualStd);
   const upperBound = lastPrice * (1 + result.prediction + zScore * residualStd);
 
@@ -92,6 +98,7 @@ export function runForecast(
     lowerBound: Math.max(0, lowerBound),
     upperBound,
     confidenceLevel: 0.95,
+    intervalNote: 'Approximate interval based on ±1.96σ of residuals. Assumes normal distribution of errors, which is often violated for financial returns.',
     metrics: result.metrics,
     status,
     warnings,

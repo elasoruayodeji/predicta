@@ -1,8 +1,15 @@
 // ============================================================
-// Application State Management
+// Application State Management with Persistence
 // ============================================================
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { StockDataset, WatchlistItem, AppSettings, ResearchReport, AnomalyEvent } from '../types';
+import {
+  saveDatasets, loadDatasets,
+  saveWatchlist, loadWatchlist,
+  saveSettings, loadSettings,
+  saveReports, loadReports,
+  saveAnomalies, loadAnomalies,
+} from '../utils/storage';
 
 interface AppState {
   datasets: Map<string, StockDataset>;
@@ -11,6 +18,7 @@ interface AppState {
   reports: ResearchReport[];
   settings: AppSettings;
   anomalies: Map<string, AnomalyEvent[]>;
+  storageLoaded: boolean;
 }
 
 type Action =
@@ -23,7 +31,8 @@ type Action =
   | { type: 'ADD_REPORT'; payload: ResearchReport }
   | { type: 'REMOVE_REPORT'; payload: string }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<AppSettings> }
-  | { type: 'SET_ANOMALIES'; payload: { symbol: string; anomalies: AnomalyEvent[] } };
+  | { type: 'SET_ANOMALIES'; payload: { symbol: string; anomalies: AnomalyEvent[] } }
+  | { type: 'LOAD_FROM_STORAGE'; payload: Partial<AppState> };
 
 const defaultSettings: AppSettings = {
   currency: 'NGN',
@@ -42,6 +51,7 @@ const initialState: AppState = {
   reports: [],
   settings: defaultSettings,
   anomalies: new Map(),
+  storageLoaded: false,
 };
 
 function appReducer(state: AppState, action: Action): AppState {
@@ -84,6 +94,8 @@ function appReducer(state: AppState, action: Action): AppState {
       newAnomalies.set(action.payload.symbol, action.payload.anomalies);
       return { ...state, anomalies: newAnomalies };
     }
+    case 'LOAD_FROM_STORAGE':
+      return { ...state, ...action.payload, storageLoaded: true };
     default:
       return state;
   }
@@ -98,6 +110,38 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    const loadedDatasets = loadDatasets();
+    const loadedWatchlist = loadWatchlist();
+    const loadedSettings = loadSettings(defaultSettings);
+    const loadedReports = loadReports();
+    const loadedAnomalies = loadAnomalies();
+
+    dispatch({
+      type: 'LOAD_FROM_STORAGE',
+      payload: {
+        datasets: loadedDatasets,
+        watchlist: loadedWatchlist,
+        settings: loadedSettings,
+        reports: loadedReports,
+        anomalies: loadedAnomalies,
+      },
+    });
+  }, []);
+
+  // Persist to localStorage on state changes (after initial load)
+  useEffect(() => {
+    if (!state.storageLoaded) return;
+
+    saveDatasets(state.datasets);
+    saveWatchlist(state.watchlist);
+    saveSettings(state.settings);
+    saveReports(state.reports);
+    saveAnomalies(state.anomalies);
+  }, [state.datasets, state.watchlist, state.settings, state.reports, state.anomalies, state.storageLoaded]);
+
   return (
     <AppContext.Provider value={{ state, dispatch }}>
       {children}

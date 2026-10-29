@@ -214,9 +214,9 @@ export function ForecastWorkspace({ onNavigate }: ForecastWorkspaceProps) {
               subtitle={`${selectedHorizon}-session ahead`}
             />
             <MetricCard
-              label="95% Interval"
+              label="Approximate Interval"
               value={`${formatPrice(forecast.lowerBound)} — ${formatPrice(forecast.upperBound)}`}
-              subtitle="Prediction bounds"
+              subtitle="±1.96σ (assumes normality)"
               variant="forecast"
             />
             <MetricCard
@@ -224,6 +224,13 @@ export function ForecastWorkspace({ onNavigate }: ForecastWorkspaceProps) {
               value={`${(forecast.metrics.directionalAccuracy * 100).toFixed(1)}%`}
               subtitle="On validation data"
             />
+          </div>
+
+          {/* Interval Limitations Note */}
+          <div className="bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg p-3">
+            <p className="text-xs text-[var(--color-text-muted)]">
+              <strong className="text-[var(--color-text-secondary)]">Note:</strong> {forecast.intervalNote}
+            </p>
           </div>
 
           {/* Forecast Chart */}
