@@ -82,12 +82,12 @@ export function MarketMovers({ onSelectStock }: MarketMoversProps) {
     return null;
   }
 
-  // Sort by different criteria
-  const topGainers = [...movers].sort((a, b) => b.dailyChangePercent - a.dailyChangePercent).slice(0, 5);
-  const topLosers = [...movers].sort((a, b) => a.dailyChangePercent - b.dailyChangePercent).slice(0, 5);
-  const mostActive = [...movers].sort((a, b) => b.volume - a.volume).slice(0, 5);
-  const highestVolatility = [...movers].sort((a, b) => b.volatility - a.volatility).slice(0, 5);
-  const largestDrawdown = [...movers].sort((a, b) => b.maxDrawdown - a.maxDrawdown).slice(0, 5);
+  // Sort by different criteria - show fewer cards on smaller screens
+  const topGainers = [...movers].sort((a, b) => b.dailyChangePercent - a.dailyChangePercent).slice(0, 3);
+  const topLosers = [...movers].sort((a, b) => a.dailyChangePercent - b.dailyChangePercent).slice(0, 3);
+  const mostActive = [...movers].sort((a, b) => b.volume - a.volume).slice(0, 3);
+  const highestVolatility = [...movers].sort((a, b) => b.volatility - a.volatility).slice(0, 3);
+  const largestDrawdown = [...movers].sort((a, b) => b.maxDrawdown - a.maxDrawdown).slice(0, 3);
 
   const renderMoverCard = (mover: MoverData, metric: string, metricValue: string) => (
     <div
@@ -156,7 +156,7 @@ export function MarketMovers({ onSelectStock }: MarketMoversProps) {
           <TrendingUp size={14} className="text-[var(--color-positive)]" />
           <h4 className="text-xs font-semibold text-[var(--color-text-primary)]">Top Gainers</h4>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {topGainers.map(m => renderMoverCard(m, 'Daily Change', formatPercent(m.dailyChangePercent)))}
         </div>
       </div>
@@ -167,7 +167,7 @@ export function MarketMovers({ onSelectStock }: MarketMoversProps) {
           <TrendingDown size={14} className="text-[var(--color-negative)]" />
           <h4 className="text-xs font-semibold text-[var(--color-text-primary)]">Top Losers</h4>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {topLosers.map(m => renderMoverCard(m, 'Daily Change', formatPercent(m.dailyChangePercent)))}
         </div>
       </div>
@@ -178,30 +178,8 @@ export function MarketMovers({ onSelectStock }: MarketMoversProps) {
           <Activity size={14} className="text-[var(--color-accent-blue)]" />
           <h4 className="text-xs font-semibold text-[var(--color-text-primary)]">Most Active</h4>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {mostActive.map(m => renderMoverCard(m, 'Volume', formatVolume(m.volume)))}
-        </div>
-      </div>
-
-      {/* Highest Volatility */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <AlertCircle size={14} className="text-[var(--color-warning)]" />
-          <h4 className="text-xs font-semibold text-[var(--color-text-primary)]">Highest Volatility</h4>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-          {highestVolatility.map(m => renderMoverCard(m, 'Volatility', `${m.volatility.toFixed(1)}%`))}
-        </div>
-      </div>
-
-      {/* Largest Drawdown */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <BarChart3 size={14} className="text-[var(--color-negative)]" />
-          <h4 className="text-xs font-semibold text-[var(--color-text-primary)]">Largest Drawdown</h4>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-          {largestDrawdown.map(m => renderMoverCard(m, 'Max DD', `-${m.maxDrawdown.toFixed(1)}%`))}
         </div>
       </div>
     </div>
