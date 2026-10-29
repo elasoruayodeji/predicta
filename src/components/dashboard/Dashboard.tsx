@@ -4,6 +4,7 @@
 import React from 'react';
 import { useAppState } from '../../store/AppContext';
 import { MetricCard, EmptyState, DataImportPrompt, StatusBadge } from '../common';
+import { InvestoConnectionStatus } from '../common/InvestoConnectionStatus';
 import { MarketMovers } from './MarketMovers';
 import { formatPrice, formatPercent, formatDate, formatVolume, getChangeColor } from '../../utils/formatters';
 import { Database, TrendingUp, AlertTriangle, FileText, BarChart3, Activity } from 'lucide-react';
@@ -35,6 +36,12 @@ export function Dashboard({ onNavigate, onSelectStock }: DashboardProps) {
 
   return (
     <div className="space-y-6 max-w-7xl">
+      {/* Connection Status */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Dashboard</h2>
+        <InvestoConnectionStatus />
+      </div>
+
       {/* Overview Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard

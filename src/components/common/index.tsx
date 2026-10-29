@@ -67,7 +67,7 @@ export function LoadingState({ message = 'Processing...' }: { message?: string }
 interface EmptyStateProps {
   icon?: React.ReactNode;
   title: string;
-  description: string;
+  description: React.ReactNode;
   action?: React.ReactNode;
 }
 
@@ -76,7 +76,7 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
     <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
       {icon && <div className="p-4 rounded-2xl bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">{icon}</div>}
       <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{title}</h3>
-      <p className="text-sm text-[var(--color-text-secondary)] max-w-md">{description}</p>
+      <div className="text-sm text-[var(--color-text-secondary)] max-w-md">{description}</div>
       {action && <div className="mt-2">{action}</div>}
     </div>
   );
@@ -116,14 +116,30 @@ export function DataImportPrompt({ onImport }: { onImport: () => void }) {
     <EmptyState
       icon={<Database size={32} />}
       title="No Data Available"
-      description="Import stock data via CSV to begin analysis. PREDICTA supports standard OHLCV format with Date, Open, High, Low, Close, and Volume columns."
+      description={
+        <div className="space-y-2">
+          <p>Import stock data to begin analysis. You have two options:</p>
+          <ul className="text-left space-y-1 text-xs">
+            <li>• <strong>Investo API:</strong> Real-time NGX market data (146 equities) — requires server configuration</li>
+            <li>• <strong>CSV Import:</strong> Upload your own historical data in OHLCV format</li>
+          </ul>
+        </div>
+      }
       action={
-        <button
-          onClick={onImport}
-          className="px-5 py-2.5 text-sm font-medium rounded-lg bg-[var(--color-accent-blue)] text-white hover:bg-[var(--color-accent-blue-dim)] transition-colors"
-        >
-          Import Data
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={onImport}
+            className="px-5 py-2.5 text-sm font-medium rounded-lg bg-[var(--color-accent-blue)] text-white hover:bg-[var(--color-accent-blue-dim)] transition-colors"
+          >
+            Import CSV Data
+          </button>
+          <button
+            onClick={onImport}
+            className="px-5 py-2.5 text-sm font-medium rounded-lg bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border border-[var(--color-border-primary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+          >
+            Browse Investo API
+          </button>
+        </div>
       }
     />
   );
