@@ -68,17 +68,31 @@ PREDICTA is a sophisticated stock market research platform that combines:
 
 4. **Start the application**
    
-   **Option A: With Investo API (Real Data)**
-   ```bash
-   node server/index.js
-   ```
-   Then open http://localhost:3000
-   
-   **Option B: Development Mode (No API)**
+   **Option A: Development Mode (Recommended)**
    ```bash
    npm run dev
    ```
-   Then open http://localhost:5173
+   This starts both the Vite dev server (port 5173) and the Investo proxy server (port 3001) together.
+   
+   Open http://localhost:5173
+   
+   **Option B: Production Mode**
+   ```bash
+   npm run build
+   npm start
+   ```
+   This builds the app and serves it from the proxy server on port 3001.
+   
+   Open http://localhost:3001
+   
+   **Option C: Manual Development**
+   ```bash
+   # Terminal 1: Start the backend server
+   npm run dev:server
+   
+   # Terminal 2: Start the frontend dev server
+   npm run dev:client
+   ```
 
 ### First Steps
 
