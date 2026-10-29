@@ -6,8 +6,9 @@ import { useAppState, useAllDatasets } from '../../store/AppContext';
 import { parseCSV, generateSampleCSV } from '../../utils/csv';
 import { validatePriceData, cleanPriceData } from '../../engine/dataValidation';
 import { Button, MetricCard, EmptyState, WarningBanner } from '../common';
+import { InvestoBrowser } from './InvestoBrowser';
 import { formatPrice, formatPercent, formatDate, getChangeColor } from '../../utils/formatters';
-import { Upload, Search, Database, FileText, CheckCircle, XCircle, AlertCircle, BarChart3 } from 'lucide-react';
+import { Upload, Search, Database, FileText, CheckCircle, XCircle, AlertCircle, BarChart3, Cloud } from 'lucide-react';
 
 interface StockExplorerProps {
   onNavigate: (page: string) => void;
@@ -122,6 +123,9 @@ export function StockExplorer({ onNavigate, onSelectStock }: StockExplorerProps)
 
   return (
     <div className="space-y-6 max-w-5xl">
+      {/* Investo API Browser — Real NGX Market Data */}
+      <InvestoBrowser onImportSuccess={() => setImportStatus('idle')} />
+
       {/* Import Section */}
       <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-6">
         <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">Import Stock Data</h3>
@@ -224,6 +228,18 @@ export function StockExplorer({ onNavigate, onSelectStock }: StockExplorerProps)
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">
                           {ds.info.exchange}
                         </span>
+                        {/* Data source badge */}
+                        {ds.info.dataSource === 'Investo API' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-positive-dim)] text-[var(--color-positive)] font-bold flex items-center gap-1">
+                            <Cloud size={8} />
+                            REAL DATA
+                          </span>
+                        )}
+                        {ds.info.dataSource === 'CSV Upload' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-accent-blue-glow)] text-[var(--color-accent-blue)] font-bold">
+                            CSV
+                          </span>
+                        )}
                         {ds.info.symbol.includes('SYNTHETIC') && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-warning-dim)] text-[var(--color-warning)] font-bold">
                             SYNTHETIC

@@ -1,10 +1,61 @@
 // ============================================================
 // Settings Page
 // ============================================================
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAppState } from '../../store/AppContext';
 import { Disclaimer } from '../common';
-import { Settings as SettingsIcon, Shield, Database, Globe, Key } from 'lucide-react';
+import { checkInvestoHealth } from '../../services/investoClient';
+import { Settings as SettingsIcon, Shield, Database, Globe, Key, Loader2, CheckCircle, XCircle } from 'lucide-react';
+
+function InvestoStatus() {
+  const [status, setStatus] = useState<'checking' | 'configured' | 'not_configured' | 'error'>('checking');
+
+  useEffect(() => {
+    checkInvestoHealth().then(health => {
+      if (health.ok && health.investoConfigured) {
+        setStatus('configured');
+      } else if (health.ok && !health.investoConfigured) {
+        setStatus('not_configured');
+      } else {
+        setStatus('error');
+      }
+    }).catch(() => setStatus('error'));
+  }, []);
+
+  if (status === 'checking') {
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] font-bold flex items-center gap-1">
+        <Loader2 size={10} className="animate-spin" />
+        CHECKING
+      </span>
+    );
+  }
+
+  if (status === 'configured') {
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-positive-dim)] text-[var(--color-positive)] font-bold flex items-center gap-1">
+        <CheckCircle size={10} />
+        CONFIGURED
+      </span>
+    );
+  }
+
+  if (status === 'not_configured') {
+    return (
+      <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-warning-dim)] text-[var(--color-warning)] font-bold flex items-center gap-1">
+        <XCircle size={10} />
+        NOT CONFIGURED
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-negative-dim)] text-[var(--color-negative)] font-bold flex items-center gap-1">
+      <XCircle size={10} />
+      SERVER OFFLINE
+    </span>
+  );
+}
 
 export function SettingsPage() {
   const { state, dispatch } = useAppState();
@@ -57,25 +108,44 @@ export function SettingsPage() {
           <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-[var(--color-text-primary)]">CSV Import (Active)</p>
-                <p className="text-[11px] text-[var(--color-text-muted)]">Import data from CSV files. No API key required.</p>
+                <p className="text-xs font-semibold text-[var(--color-text-primary)]">CSV Import</p>
+                <p className="text-[11px] text-[var(--color-text-muted)]">Import data from CSV files. Always available.</p>
               </div>
               <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-positive-dim)] text-[var(--color-positive)] font-bold">ACTIVE</span>
             </div>
           </div>
-          <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg opacity-60">
+          <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold text-[var(--color-text-primary)]">Investo Data API</p>
-                <p className="text-[11px] text-[var(--color-text-muted)]">NGX historical data. Requires API key configuration.</p>
+                <p className="text-xs font-semibold text-[var(--color-text-primary)]">Synthetic Demo Data</p>
+                <p className="text-[11px] text-[var(--color-text-muted)]">Randomly generated sample data for testing. Not real prices.</p>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] font-bold">NOT CONFIGURED</span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-warning-dim)] text-[var(--color-warning)] font-bold">AVAILABLE</span>
             </div>
           </div>
-          <p className="text-[11px] text-[var(--color-text-muted)]">
-            To enable live data feeds, configure your API provider. API keys are stored locally and never exposed in the frontend.
-            See the documentation for setup instructions.
-          </p>
+          <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-[var(--color-text-primary)]">Investo Data API (NGX)</p>
+                <p className="text-[11px] text-[var(--color-text-muted)]">
+                  Real Nigerian Exchange data via secure server proxy. API key stored server-side only.
+                </p>
+              </div>
+              <InvestoStatus />
+            </div>
+          </div>
+          <div className="mt-3 p-3 bg-[var(--color-bg-tertiary)] rounded-lg border border-[var(--color-border-primary)]">
+            <p className="text-[11px] text-[var(--color-text-secondary)] font-semibold mb-1">How to configure Investo:</p>
+            <ol className="text-[11px] text-[var(--color-text-muted)] space-y-1 list-decimal list-inside">
+              <li>Get a free API key at <a href="https://investo.ng/developers/keys" target="_blank" rel="noopener" className="text-[var(--color-accent-blue)] hover:underline">investo.ng/developers/keys</a></li>
+              <li>Copy <code className="px-1 py-0.5 bg-[var(--color-bg-secondary)] rounded text-[10px]">.env.example</code> to <code className="px-1 py-0.5 bg-[var(--color-bg-secondary)] rounded text-[10px]">.env</code></li>
+              <li>Add your key: <code className="px-1 py-0.5 bg-[var(--color-bg-secondary)] rounded text-[10px]">INVESTO_API_KEY=inv_...</code></li>
+              <li>Start the server: <code className="px-1 py-0.5 bg-[var(--color-bg-secondary)] rounded text-[10px]">node server/index.js</code></li>
+            </ol>
+            <p className="text-[10px] text-[var(--color-text-muted)] mt-2">
+              Free tier: 1,000 requests/day · End-of-day data · Attribution required: "Data: Investo — investo.ng"
+            </p>
+          </div>
         </div>
       </div>
 
