@@ -114,13 +114,13 @@ export function SettingsPage() {
               <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-positive-dim)] text-[var(--color-positive)] font-bold">ACTIVE</span>
             </div>
           </div>
-          <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg">
+          <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg opacity-60">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold text-[var(--color-text-primary)]">Synthetic Demo Data</p>
-                <p className="text-[11px] text-[var(--color-text-muted)]">Randomly generated sample data for testing. Not real prices.</p>
+                <p className="text-[11px] text-[var(--color-text-muted)]">Randomly generated sample data removed from UI. CSV import and Investo API only.</p>
               </div>
-              <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-warning-dim)] text-[var(--color-warning)] font-bold">AVAILABLE</span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] font-bold">REMOVED</span>
             </div>
           </div>
           <div className="p-3 bg-[var(--color-bg-tertiary)] rounded-lg">
