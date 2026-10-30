@@ -111,7 +111,7 @@ export function ErrorState({ title = 'Error', message, onRetry }: ErrorStateProp
 // ============================================================
 // Data Import Prompt
 // ============================================================
-export function DataImportPrompt({ onImport }: { onImport: () => void }) {
+export function DataImportPrompt({ onImport, onBrowse }: { onImport: () => void; onBrowse?: () => void }) {
   return (
     <EmptyState
       icon={<Database size={32} />}
@@ -133,12 +133,14 @@ export function DataImportPrompt({ onImport }: { onImport: () => void }) {
           >
             Import CSV Data
           </button>
-          <button
-            onClick={onImport}
-            className="px-5 py-2.5 text-sm font-medium rounded-lg bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border border-[var(--color-border-primary)] hover:bg-[var(--color-bg-hover)] transition-colors"
-          >
-            Browse Investo API
-          </button>
+          {onBrowse && (
+            <button
+              onClick={onBrowse}
+              className="px-5 py-2.5 text-sm font-medium rounded-lg bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border border-[var(--color-border-primary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+            >
+              Browse Investo API
+            </button>
+          )}
         </div>
       }
     />
