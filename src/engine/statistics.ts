@@ -196,3 +196,131 @@ export function calculateDrawdownSeries(prices: PriceRecord[]): { date: string; 
 
   return result;
 }
+
+/**
+ * Calculate Relative Strength Index (RSI)
+ * @param prices - Price records
+ * @param period - RSI period (default 14)
+ * @returns Array of { date, value } objects
+ */
+export function calculateRSI(prices: PriceRecord[], period: number = 14): { date: string; value: number }[] {
+  if (prices.length < period + 1) return [];
+
+  const returns = calculateReturns(prices);
+  const result: { date: string; value: number }[] = [];
+
+  let avgGain = 0;
+  let avgLoss = 0;
+
+  // Calculate initial average gain/loss
+  for (let i = 0; i < period; i++) {
+    const change = returns[i];
+    if (change > 0) avgGain += change;
+    else avgLoss += Math.abs(change);
+  }
+
+  avgGain /= period;
+  avgLoss /= period;
+
+  // First RSI value
+  const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+  const rsi = 100 - (100 / (1 + rs));
+  result.push({ date: prices[period].date, value: rsi });
+
+  // Calculate subsequent RSI values using smoothed averages
+  for (let i = period; i < returns.length; i++) {
+    const change = returns[i];
+    const gain = change > 0 ? change : 0;
+    const loss = change < 0 ? Math.abs(change) : 0;
+
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+
+    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+    const rsi = 100 - (100 / (1 + rs));
+    result.push({ date: prices[i + 1].date, value: rsi });
+  }
+
+  return result;
+}
+
+/**
+ * Calculate Moving Average Convergence Divergence (MACD)
+ * @param prices - Price records
+ * @param fastPeriod - Fast EMA period (default 12)
+ * @param slowPeriod - Slow EMA period (default 26)
+ * @param signalPeriod - Signal line period (default 9)
+ * @returns Object with macd, signal, and histogram arrays
+ */
+export function calculateMACD(
+  prices: PriceRecord[],
+  fastPeriod: number = 12,
+  slowPeriod: number = 26,
+  signalPeriod: number = 9
+): {
+  macd: { date: string; value: number }[];
+  signal: { date: string; value: number }[];
+  histogram: { date: string; value: number }[];
+} {
+  if (prices.length < slowPeriod + signalPeriod) {
+    return { macd: [], signal: [], histogram: [] };
+  }
+
+  const closes = prices.map(p => p.adjustedClose ?? p.close);
+
+  // Calculate EMAs
+  const calculateEMA = (data: number[], period: number): number[] => {
+    const ema: number[] = [];
+    const multiplier = 2 / (period + 1);
+
+    // First EMA is SMA
+    let sum = 0;
+    for (let i = 0; i < period; i++) {
+      sum += data[i];
+    }
+    ema.push(sum / period);
+
+    // Calculate subsequent EMAs
+    for (let i = period; i < data.length; i++) {
+      ema.push((data[i] - ema[ema.length - 1]) * multiplier + ema[ema.length - 1]);
+    }
+
+    return ema;
+  };
+
+  const fastEMA = calculateEMA(closes, fastPeriod);
+  const slowEMA = calculateEMA(closes, slowPeriod);
+
+  // Calculate MACD line (fast EMA - slow EMA)
+  const macdLine: number[] = [];
+  const offset = slowPeriod - fastPeriod;
+  for (let i = 0; i < slowEMA.length; i++) {
+    macdLine.push(fastEMA[i + offset] - slowEMA[i]);
+  }
+
+  // Calculate signal line (EMA of MACD)
+  const signalLine = calculateEMA(macdLine, signalPeriod);
+
+  // Calculate histogram (MACD - Signal)
+  const histogram: number[] = [];
+  for (let i = 0; i < signalLine.length; i++) {
+    histogram.push(macdLine[i + signalPeriod - 1] - signalLine[i]);
+  }
+
+  // Format results with dates
+  const startDate = slowPeriod + signalPeriod - 1;
+  const macd: { date: string; value: number }[] = [];
+  const signal: { date: string; value: number }[] = [];
+  const histogramResult: { date: string; value: number }[] = [];
+
+  for (let i = 0; i < signalLine.length; i++) {
+    const dateIdx = startDate + i;
+    if (dateIdx < prices.length) {
+      macd.push({ date: prices[dateIdx].date, value: macdLine[i + signalPeriod - 1] });
+      signal.push({ date: prices[dateIdx].date, value: signalLine[i] });
+      histogramResult.push({ date: prices[dateIdx].date, value: histogram[i] });
+    }
+  }
+
+  return { macd, signal, histogram: histogramResult };
+}
