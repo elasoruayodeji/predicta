@@ -311,10 +311,13 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
                 </label>
               </div>
               <div className="border-t border-[var(--color-border-primary)] pt-3">
-                <p className="text-xs text-[var(--color-text-muted)] mb-2">Or load sample data</p>
+                <p className="text-xs text-[var(--color-text-muted)] mb-2">Or load sample data for testing</p>
                 <Button variant="secondary" onClick={handleLoadSample} className="w-full">
-                  Load Sample Portfolio
+                  Load Sample Portfolio (Demo Data)
                 </Button>
+                <p className="text-[10px] text-[var(--color-warning)] mt-2">
+                  ⚠️ Sample data is for testing only — not real market prices
+                </p>
               </div>
             </div>
             <div className="mt-4 flex justify-end">
