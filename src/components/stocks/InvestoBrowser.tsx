@@ -35,6 +35,7 @@ export function InvestoBrowser({ onImportSuccess }: InvestoBrowserProps) {
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [attribution, setAttribution] = useState<string>('');
   const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [dataFreshness, setDataFreshness] = useState<'fresh' | 'stale' | 'unknown'>('unknown');
 
   // Check server health on mount
   useEffect(() => {
@@ -62,8 +63,24 @@ export function InvestoBrowser({ onImportSuccess }: InvestoBrowserProps) {
       setStocks(result.data);
       setAttribution(getInvestoAttribution(result.meta));
       setLastUpdated(formatInvestoTimestamp(result.meta.generated_at));
+      
+      // Calculate data freshness
+      if (result.meta.generated_at) {
+        const dataTime = new Date(result.meta.generated_at).getTime();
+        const now = Date.now();
+        const hoursOld = (now - dataTime) / (1000 * 60 * 60);
+        
+        if (hoursOld < 24) {
+          setDataFreshness('fresh');
+        } else if (hoursOld < 168) { // 7 days
+          setDataFreshness('stale');
+        } else {
+          setDataFreshness('unknown');
+        }
+      }
     } else {
       setStatusMessage({ type: 'error', text: result.error.message });
+      setDataFreshness('unknown');
     }
   };
 
@@ -122,7 +139,7 @@ export function InvestoBrowser({ onImportSuccess }: InvestoBrowserProps) {
             <div className="text-[11px] text-[var(--color-text-muted)] space-y-1">
               <p>• Get a free key at: <a href="https://investo.ng/developers/keys" target="_blank" rel="noopener" className="text-[var(--color-accent-blue)] hover:underline">investo.ng/developers/keys</a></p>
               <p>• Free tier: 1,000 requests/day for personal projects</p>
-              <p>• CSV import and synthetic demo mode work without Investo</p>
+              <p>• CSV import works without Investo</p>
             </div>
           </div>
         </div>
@@ -169,17 +186,29 @@ export function InvestoBrowser({ onImportSuccess }: InvestoBrowserProps) {
               <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
                 Real NGX Market Data
               </h3>
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--color-positive-dim)] text-[var(--color-positive)] font-bold uppercase">
-                Live
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--color-accent-blue-glow)] text-[var(--color-accent-blue)] font-bold uppercase">
+                End-of-Day
               </span>
             </div>
             <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
               {stocks.length} listed equities · End-of-day data · {attribution && `Data: ${attribution}`}
             </p>
             {lastUpdated && (
-              <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-                Last updated: {lastUpdated}
-              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-[10px] text-[var(--color-text-muted)]">
+                  Last updated: {lastUpdated}
+                </p>
+                {dataFreshness === 'fresh' && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--color-positive-dim)] text-[var(--color-positive)] font-bold">
+                    Fresh
+                  </span>
+                )}
+                {dataFreshness === 'stale' && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--color-warning-dim)] text-[var(--color-warning)] font-bold">
+                    Stale
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </div>
