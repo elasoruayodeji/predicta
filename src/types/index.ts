@@ -191,4 +191,9 @@ export interface StockDataset {
   info: StockInfo;
   prices: PriceRecord[];
   quality: DataQualityReport;
+  corporateActions?: import('../engine/corporateActions').CorporateAction[];
 }
+
+// Re-export corporate action types for convenience
+export type { CorporateAction, CorporateActionType, DividendDetails, SplitDetails, BonusDetails, RightsDetails } from '../engine/corporateActions';
+export type { LiquidityMetrics, LiquidityWarning } from '../engine/liquidity';

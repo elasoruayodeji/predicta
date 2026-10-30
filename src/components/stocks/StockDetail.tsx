@@ -5,8 +5,10 @@ import React, { useState, useMemo } from 'react';
 import { useAppState } from '../../store/AppContext';
 import { useDataset } from '../../store/AppContext';
 import { calculateHistoricalStatistics, calculateMovingAverages, calculateDrawdownSeries, calculateRollingVolatility, calculateRSI, calculateMACD } from '../../engine/statistics';
+import { calculateLiquidityMetrics } from '../../engine/liquidity';
 import { MetricCard, Tabs, Button, WarningBanner, Disclaimer, StatusBadge } from '../common';
 import { CandlestickChart } from '../charts/CandlestickChart';
+import { LiquidityPanel } from './LiquidityPanel';
 import { formatPrice, formatPercent, formatPercentPlain, formatDate, formatVolume, getChangeColor } from '../../utils/formatters';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, ComposedChart, Bar } from 'recharts';
 import { ArrowLeft, Star, Download, TrendingUp, BarChart3, Activity, AlertTriangle } from 'lucide-react';
@@ -77,6 +79,14 @@ export function StockDetail({ symbol, onBack, onNavigate }: StockDetailProps) {
     return calculateMACD(filteredPrices);
   }, [filteredPrices]);
 
+  const liquidityMetrics = useMemo(() => {
+    try {
+      return calculateLiquidityMetrics(prices);
+    } catch {
+      return null;
+    }
+  }, [prices]);
+
   const isInWatchlist = state.watchlist.some(w => w.symbol === symbol);
 
   const toggleWatchlist = () => {
@@ -110,6 +120,7 @@ export function StockDetail({ symbol, onBack, onNavigate }: StockDetailProps) {
   const tabs = [
     { id: 'overview', label: 'Overview' },
     { id: 'technical', label: 'Technical' },
+    { id: 'liquidity', label: 'Liquidity' },
     { id: 'statistics', label: 'Statistics' },
     { id: 'drawdown', label: 'Drawdown' },
     { id: 'volatility', label: 'Volatility' },
@@ -309,6 +320,10 @@ export function StockDetail({ symbol, onBack, onNavigate }: StockDetailProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === 'liquidity' && liquidityMetrics && (
+        <LiquidityPanel metrics={liquidityMetrics} />
       )}
 
       {activeTab === 'statistics' && stats && (
