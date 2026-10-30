@@ -4,8 +4,9 @@
 import React, { useState, useMemo } from 'react';
 import { useAppState } from '../../store/AppContext';
 import { useDataset } from '../../store/AppContext';
-import { calculateHistoricalStatistics, calculateMovingAverages, calculateDrawdownSeries, calculateRollingVolatility } from '../../engine/statistics';
+import { calculateHistoricalStatistics, calculateMovingAverages, calculateDrawdownSeries, calculateRollingVolatility, calculateRSI, calculateMACD } from '../../engine/statistics';
 import { MetricCard, Tabs, Button, WarningBanner, Disclaimer, StatusBadge } from '../common';
+import { CandlestickChart } from '../charts/CandlestickChart';
 import { formatPrice, formatPercent, formatPercentPlain, formatDate, formatVolume, getChangeColor } from '../../utils/formatters';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, ComposedChart, Bar } from 'recharts';
 import { ArrowLeft, Star, Download, TrendingUp, BarChart3, Activity, AlertTriangle } from 'lucide-react';
@@ -22,6 +23,7 @@ export function StockDetail({ symbol, onBack, onNavigate }: StockDetailProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [timeRange, setTimeRange] = useState<'1Y' | '5Y' | '10Y' | 'ALL'>('ALL');
   const [showMA, setShowMA] = useState(true);
+  const [showVolume, setShowVolume] = useState(true);
 
   if (!dataset) {
     return (
@@ -67,6 +69,14 @@ export function StockDetail({ symbol, onBack, onNavigate }: StockDetailProps) {
     return calculateRollingVolatility(filteredPrices);
   }, [filteredPrices]);
 
+  const rsi = useMemo(() => {
+    return calculateRSI(filteredPrices, 14);
+  }, [filteredPrices]);
+
+  const macd = useMemo(() => {
+    return calculateMACD(filteredPrices);
+  }, [filteredPrices]);
+
   const isInWatchlist = state.watchlist.some(w => w.symbol === symbol);
 
   const toggleWatchlist = () => {
@@ -99,6 +109,7 @@ export function StockDetail({ symbol, onBack, onNavigate }: StockDetailProps) {
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
+    { id: 'technical', label: 'Technical' },
     { id: 'statistics', label: 'Statistics' },
     { id: 'drawdown', label: 'Drawdown' },
     { id: 'volatility', label: 'Volatility' },
@@ -186,71 +197,116 @@ export function StockDetail({ symbol, onBack, onNavigate }: StockDetailProps) {
               {range}
             </button>
           ))}
-          {activeTab === 'overview' && (
-            <button
-              onClick={() => setShowMA(!showMA)}
-              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                showMA ? 'bg-[var(--color-forecast-dim)] text-[var(--color-forecast)]' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'
-              }`}
-            >
-              MA
-            </button>
-          )}
         </div>
       </div>
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
         <div className="space-y-4">
-          {/* Price Chart */}
+          {/* Professional Candlestick Chart */}
           <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
-            <h4 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Price History</h4>
-            <ResponsiveContainer width="100%" height={350}>
-              <ComposedChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-primary)" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }}
-                  tickFormatter={(v) => formatDate(v).split(',').slice(0, 2).join(',')}
-                  interval="preserveStartEnd"
-                />
-                <YAxis 
-                  tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }}
-                  domain={['auto', 'auto']}
-                  tickFormatter={(v) => v.toFixed(0)}
-                />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-primary)', borderRadius: '8px', fontSize: '12px' }}
-                  labelStyle={{ color: 'var(--color-text-muted)' }}
-                  labelFormatter={(v) => formatDate(v as string)}
-                />
-                <Area type="monotone" dataKey="close" stroke="var(--color-accent-blue)" fill="var(--color-accent-blue)" fillOpacity={0.05} strokeWidth={2} dot={false} name="Close" />
-                {showMA && (
-                  <>
-                    <Line type="monotone" dataKey="ma20" stroke="var(--color-warning)" strokeWidth={1} dot={false} strokeDasharray="4 2" name="20-day MA" />
-                    <Line type="monotone" dataKey="ma50" stroke="var(--color-forecast)" strokeWidth={1} dot={false} strokeDasharray="4 2" name="50-day MA" />
-                  </>
-                )}
-              </ComposedChart>
-            </ResponsiveContainer>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Price Chart (OHLC)</h4>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowMA(!showMA)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                    showMA ? 'bg-[var(--color-forecast-dim)] text-[var(--color-forecast)]' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'
+                  }`}
+                >
+                  MA
+                </button>
+                <button
+                  onClick={() => setShowVolume(!showVolume)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                    showVolume ? 'bg-[var(--color-accent-blue-glow)] text-[var(--color-accent-blue)]' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'
+                  }`}
+                >
+                  Volume
+                </button>
+              </div>
+            </div>
+            <CandlestickChart 
+              data={filteredPrices} 
+              height={450}
+              showMA={showMA}
+              showVolume={showVolume}
+              maPeriods={[20, 50]}
+            />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'technical' && (
+        <div className="space-y-4">
+          {/* RSI Chart */}
+          <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
+            <h4 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+              Relative Strength Index (RSI-14)
+            </h4>
+            {rsi.length > 0 ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={rsi}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-primary)" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} interval="preserveStartEnd" />
+                  <YAxis 
+                    tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} 
+                    domain={[0, 100]}
+                    ticks={[0, 30, 50, 70, 100]}
+                  />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-primary)', borderRadius: '8px', fontSize: '12px' }}
+                    formatter={(value: number) => [value.toFixed(2), 'RSI']}
+                    labelFormatter={(v) => formatDate(v as string)}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="var(--color-accent-blue)" fill="var(--color-accent-blue)" fillOpacity={0.1} strokeWidth={2} />
+                  {/* Overbought/Oversold lines */}
+                  <Line type="monotone" dataKey={() => 70} stroke="var(--color-negative)" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+                  <Line type="monotone" dataKey={() => 30} stroke="var(--color-positive)" strokeWidth={1} strokeDasharray="3 3" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-sm text-[var(--color-text-muted)] text-center py-8">Insufficient data for RSI calculation</p>
+            )}
+            <div className="mt-2 text-[11px] text-[var(--color-text-muted)]">
+              <span className="text-[var(--color-negative)]">— Overbought (70)</span> · 
+              <span className="text-[var(--color-positive)]"> — Oversold (30)</span>
+            </div>
           </div>
 
-          {/* Volume Chart */}
+          {/* MACD Chart */}
           <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
-            <h4 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">Volume</h4>
-            <ResponsiveContainer width="100%" height={120}>
-              <AreaChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-primary)" />
-                <XAxis dataKey="date" tick={false} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} tickFormatter={(v) => formatVolume(v)} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-primary)', borderRadius: '8px', fontSize: '12px' }}
-                  formatter={(value: number) => [formatVolume(value), 'Volume']}
-                  labelFormatter={(v) => formatDate(v as string)}
-                />
-                <Area type="monotone" dataKey="volume" stroke="var(--color-text-muted)" fill="var(--color-bg-hover)" strokeWidth={1} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <h4 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+              MACD (12, 26, 9)
+            </h4>
+            {macd.macd.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <ComposedChart data={macd.macd.map((m, i) => ({
+                  date: m.date,
+                  macd: m.value,
+                  signal: macd.signal[i]?.value ?? 0,
+                  histogram: macd.histogram[i]?.value ?? 0,
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-primary)" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-primary)', borderRadius: '8px', fontSize: '12px' }}
+                    labelFormatter={(v) => formatDate(v as string)}
+                  />
+                  <Bar dataKey="histogram" fill="var(--color-accent-blue)" opacity={0.5} name="Histogram" />
+                  <Line type="monotone" dataKey="macd" stroke="var(--color-accent-blue)" strokeWidth={2} dot={false} name="MACD" />
+                  <Line type="monotone" dataKey="signal" stroke="var(--color-warning)" strokeWidth={2} dot={false} name="Signal" />
+                </ComposedChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-sm text-[var(--color-text-muted)] text-center py-8">Insufficient data for MACD calculation</p>
+            )}
+            <div className="mt-2 flex items-center gap-4 text-[11px] text-[var(--color-text-muted)]">
+              <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[var(--color-accent-blue)]"></span> MACD</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[var(--color-warning)]"></span> Signal</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 bg-[var(--color-accent-blue)] opacity-50"></span> Histogram</span>
+            </div>
           </div>
         </div>
       )}

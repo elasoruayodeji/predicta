@@ -54,7 +54,7 @@ export function AppShell({ children, currentPage, onNavigate }: AppShellProps) {
               <TrendingUp size={18} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-[#FF2D95] tracking-tight">PREDICTA</h1>
+              <h1 className="text-lg font-bold text-[var(--color-text-primary)] tracking-tight">PREDICTA</h1>
               <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">Quantitative Research</p>
             </div>
           </div>
@@ -115,10 +115,7 @@ export function AppShell({ children, currentPage, onNavigate }: AppShellProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)]">
-              <div className="w-2 h-2 rounded-full bg-[var(--color-positive)]"></div>
-              <span className="text-xs text-[var(--color-text-secondary)]">Local Mode</span>
-            </div>
+            {/* Connection status shown on dashboard */}
           </div>
         </header>
 
