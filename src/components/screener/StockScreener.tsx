@@ -5,6 +5,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAllDatasets, useAppState } from '../../store/AppContext';
 import { calculateReturns, calculateHistoricalStatistics } from '../../engine/statistics';
+import { calculateLiquidityMetrics } from '../../engine/liquidity';
 import { formatPrice, formatPercent, formatVolume, getChangeColor, formatDate } from '../../utils/formatters';
 import { Button, EmptyState } from '../common';
 import { 
@@ -41,6 +42,12 @@ interface ScreenerRow {
   sparklineData: { value: number }[];
   dataSource: string;
   importedAt: string;
+  // Liquidity metrics
+  liquidityGrade: string;
+  liquidityScore: number;
+  medianDailyValue: number;
+  tradingFrequency: number;
+  stalePriceWarning: boolean;
 }
 
 type SortKey = keyof ScreenerRow;
@@ -65,6 +72,11 @@ interface FilterState {
   minDataQuality: string;
   hasAnomalies: 'all' | 'yes' | 'no';
   isSynthetic: 'all' | 'yes' | 'no';
+  // Liquidity filters
+  minLiquidityScore: number | '';
+  maxLiquidityScore: number | '';
+  liquidityGrade: string;
+  hideStalePrices: boolean;
 }
 
 const STORAGE_KEY = 'predicta_screener_presets';
@@ -79,6 +91,10 @@ const defaultFilters: FilterState = {
   minDataQuality: '',
   hasAnomalies: 'all',
   isSynthetic: 'all',
+  minLiquidityScore: '',
+  maxLiquidityScore: '',
+  liquidityGrade: '',
+  hideStalePrices: false,
 };
 
 export function StockScreener({ onSelectStock, onNavigate }: ScreenerProps) {
@@ -145,6 +161,24 @@ export function StockScreener({ onSelectStock, onNavigate }: ScreenerProps) {
       const sparklineData = prices.slice(-30).map(p => ({ value: p.close }));
       const anomalyCount = state.anomalies.get(info.symbol)?.length ?? 0;
 
+      // Calculate liquidity metrics
+      let liquidityGrade = 'N/A';
+      let liquidityScore = 0;
+      let medianDailyValue = 0;
+      let tradingFrequency = 0;
+      let stalePriceWarning = false;
+      
+      try {
+        const liquidity = calculateLiquidityMetrics(prices);
+        liquidityGrade = liquidity.liquidityGrade;
+        liquidityScore = liquidity.liquidityScore;
+        medianDailyValue = liquidity.medianDailyValueTraded;
+        tradingFrequency = liquidity.tradingDaysWithActivity.percentage250;
+        stalePriceWarning = liquidity.stalePriceWarning;
+      } catch {
+        // Liquidity calculation failed, use defaults
+      }
+
       result.push({
         symbol: info.symbol,
         name: info.name,
@@ -168,6 +202,11 @@ export function StockScreener({ onSelectStock, onNavigate }: ScreenerProps) {
         sparklineData,
         dataSource: info.dataSource,
         importedAt: info.importedAt,
+        liquidityGrade,
+        liquidityScore,
+        medianDailyValue,
+        tradingFrequency,
+        stalePriceWarning,
       });
     }
     
@@ -205,6 +244,11 @@ export function StockScreener({ onSelectStock, onNavigate }: ScreenerProps) {
       if (filters.hasAnomalies === 'no' && row.anomalyCount > 0) return false;
       if (filters.isSynthetic === 'yes' && !row.isSynthetic) return false;
       if (filters.isSynthetic === 'no' && row.isSynthetic) return false;
+      // Liquidity filters
+      if (filters.minLiquidityScore !== '' && row.liquidityScore < Number(filters.minLiquidityScore)) return false;
+      if (filters.maxLiquidityScore !== '' && row.liquidityScore > Number(filters.maxLiquidityScore)) return false;
+      if (filters.liquidityGrade && row.liquidityGrade !== filters.liquidityGrade) return false;
+      if (filters.hideStalePrices && row.stalePriceWarning) return false;
       return true;
     });
   }, [rows, filters]);
@@ -512,6 +556,57 @@ export function StockScreener({ onSelectStock, onNavigate }: ScreenerProps) {
                 <option value="yes">Synthetic Only</option>
               </select>
             </div>
+            {/* Liquidity Filters */}
+            <div>
+              <label className="text-[10px] text-[var(--color-text-muted)] block mb-1">Min Liquidity Score</label>
+              <input
+                type="number"
+                value={filters.minLiquidityScore}
+                onChange={e => setFilters(f => ({ ...f, minLiquidityScore: e.target.value === '' ? '' : Number(e.target.value) }))}
+                placeholder="0"
+                min="0"
+                max="100"
+                className="w-full px-2 py-1.5 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded text-xs text-[var(--color-text-primary)]"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-[var(--color-text-muted)] block mb-1">Max Liquidity Score</label>
+              <input
+                type="number"
+                value={filters.maxLiquidityScore}
+                onChange={e => setFilters(f => ({ ...f, maxLiquidityScore: e.target.value === '' ? '' : Number(e.target.value) }))}
+                placeholder="100"
+                min="0"
+                max="100"
+                className="w-full px-2 py-1.5 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded text-xs text-[var(--color-text-primary)]"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-[var(--color-text-muted)] block mb-1">Liquidity Grade</label>
+              <select
+                value={filters.liquidityGrade}
+                onChange={e => setFilters(f => ({ ...f, liquidityGrade: e.target.value }))}
+                className="w-full px-2 py-1.5 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded text-xs text-[var(--color-text-primary)]"
+              >
+                <option value="">Any</option>
+                <option value="A">A - Excellent</option>
+                <option value="B">B - Good</option>
+                <option value="C">C - Fair</option>
+                <option value="D">D - Poor</option>
+                <option value="F">F - Very Poor</option>
+              </select>
+            </div>
+            <div className="flex items-end">
+              <label className="flex items-center gap-2 text-xs text-[var(--color-text-primary)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.hideStalePrices}
+                  onChange={e => setFilters(f => ({ ...f, hideStalePrices: e.target.checked }))}
+                  className="w-4 h-4 rounded border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)] text-[var(--color-accent-blue)] focus:ring-[var(--color-accent-blue)] focus:ring-2"
+                />
+                <span>Hide Stale Prices</span>
+              </label>
+            </div>
           </div>
         </div>
       )}
@@ -556,13 +651,15 @@ export function StockScreener({ onSelectStock, onNavigate }: ScreenerProps) {
                 <SortHeader label="Sharpe" field="sharpeRatio" className="text-right" />
                 <SortHeader label="Volume" field="lastVolume" className="text-right" />
                 <SortHeader label="Quality" field="dataQuality" />
+                <SortHeader label="Liq. Grade" field="liquidityGrade" />
+                <SortHeader label="Liq. Score" field="liquidityScore" className="text-right" />
                 <SortHeader label="Anomalies" field="anomalyCount" className="text-right" />
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border-primary)]">
               {sortedRows.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="p-8 text-center text-[var(--color-text-muted)]">
+                  <td colSpan={15} className="p-8 text-center text-[var(--color-text-muted)]">
                     No stocks match the current filters.
                   </td>
                 </tr>
@@ -633,6 +730,36 @@ export function StockScreener({ onSelectStock, onNavigate }: ScreenerProps) {
                       }`}>
                         {row.dataQuality}
                       </span>
+                    </td>
+                    <td className="p-2">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                        row.liquidityGrade === 'A' ? 'bg-[var(--color-positive-dim)] text-[var(--color-positive)]' :
+                        row.liquidityGrade === 'B' ? 'bg-[var(--color-accent-blue-glow)] text-[var(--color-accent-blue)]' :
+                        row.liquidityGrade === 'C' ? 'bg-[var(--color-warning-dim)] text-[var(--color-warning)]' :
+                        row.liquidityGrade === 'D' ? 'bg-[var(--color-negative-dim)] text-[var(--color-negative)]' :
+                        'bg-[var(--color-negative-dim)] text-[var(--color-negative)]'
+                      }`}>
+                        {row.liquidityGrade}
+                        {row.stalePriceWarning && ' ⚠️'}
+                      </span>
+                    </td>
+                    <td className="p-2 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <div className="w-12 bg-[var(--color-bg-tertiary)] rounded-full h-1.5">
+                          <div 
+                            className={`h-1.5 rounded-full ${
+                              row.liquidityScore >= 80 ? 'bg-[var(--color-positive)]' :
+                              row.liquidityScore >= 60 ? 'bg-[var(--color-accent-blue)]' :
+                              row.liquidityScore >= 40 ? 'bg-[var(--color-warning)]' :
+                              'bg-[var(--color-negative)]'
+                            }`}
+                            style={{ width: `${row.liquidityScore}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-mono text-[var(--color-text-muted)] w-8 text-right">
+                          {row.liquidityScore.toFixed(0)}
+                        </span>
+                      </div>
                     </td>
                     <td className="p-2 text-right">
                       {row.anomalyCount > 0 ? (

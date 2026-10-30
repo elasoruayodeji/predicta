@@ -4,7 +4,8 @@
 import React, { useState } from 'react';
 import { 
   LayoutDashboard, Search, LineChart, FlaskConical, AlertTriangle, 
-  FileText, Star, Settings, Menu, X, ChevronRight, Database, TrendingUp, Filter
+  FileText, Star, Settings, Menu, X, ChevronRight, Database, TrendingUp, Filter,
+  PieChart, Calculator, BookOpen
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -21,6 +22,9 @@ const navItems = [
   { id: 'forecast', label: 'Forecasting', icon: TrendingUp },
   { id: 'laboratory', label: 'Model Lab', icon: FlaskConical },
   { id: 'anomalies', label: 'Anomalies', icon: AlertTriangle },
+  { id: 'portfolio', label: 'Portfolio', icon: PieChart },
+  { id: 'valuation', label: 'Valuation', icon: Calculator },
+  { id: 'journal', label: 'Journal', icon: BookOpen },
   { id: 'reports', label: 'Reports', icon: FileText },
   { id: 'watchlist', label: 'Watchlist', icon: Star },
   { id: 'data', label: 'Data Import', icon: Database },
