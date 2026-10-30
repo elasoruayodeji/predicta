@@ -15,6 +15,9 @@ import { WatchlistPage } from './components/watchlist/WatchlistPage';
 import { SettingsPage } from './components/settings/SettingsPage';
 import { DataImportPage } from './components/data/DataImportPage';
 import { StockScreener } from './components/screener/StockScreener';
+import { PortfolioTracker } from './components/portfolio/PortfolioTracker';
+import { ValuationWorkbench } from './components/valuation/ValuationWorkbench';
+import { InvestmentJournal } from './components/journal/InvestmentJournal';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -57,6 +60,12 @@ function AppContent() {
         return <WatchlistPage onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
       case 'screener':
         return <StockScreener onSelectStock={handleSelectStock} onNavigate={handleNavigate} />;
+      case 'portfolio':
+        return <PortfolioTracker onNavigate={handleNavigate} />;
+      case 'valuation':
+        return <ValuationWorkbench />;
+      case 'journal':
+        return <InvestmentJournal onNavigate={handleNavigate} />;
       case 'data':
         return <DataImportPage />;
       case 'settings':
