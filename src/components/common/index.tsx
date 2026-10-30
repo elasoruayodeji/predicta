@@ -120,8 +120,8 @@ export function DataImportPrompt({ onImport, onBrowse }: { onImport: () => void;
         <div className="space-y-2">
           <p>Import stock data to begin analysis. You have two options:</p>
           <ul className="text-left space-y-1 text-xs">
-            <li>• <strong>Investo API:</strong> Real-time NGX market data (146 equities) — requires server configuration</li>
-            <li>• <strong>CSV Import:</strong> Upload your own historical data in OHLCV format</li>
+            <li>• <strong>Investo API:</strong> NGX market data (146 equities)</li>
+            <li>• <strong>CSV Import:</strong> Upload your own historical data.</li>
           </ul>
         </div>
       }
