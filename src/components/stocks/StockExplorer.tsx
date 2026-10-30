@@ -3,12 +3,12 @@
 // ============================================================
 import React, { useState, useRef } from 'react';
 import { useAppState, useAllDatasets } from '../../store/AppContext';
-import { parseCSV, generateSampleCSV } from '../../utils/csv';
+import { parseCSV } from '../../utils/csv';
 import { validatePriceData, cleanPriceData } from '../../engine/dataValidation';
 import { Button, MetricCard, EmptyState, WarningBanner } from '../common';
 import { InvestoBrowser } from './InvestoBrowser';
 import { formatPrice, formatPercent, formatDate, getChangeColor } from '../../utils/formatters';
-import { Upload, Search, Database, FileText, CheckCircle, XCircle, AlertCircle, BarChart3, Cloud } from 'lucide-react';
+import { Upload, Search, Database, CheckCircle, XCircle, AlertCircle, BarChart3, Cloud } from 'lucide-react';
 
 interface StockExplorerProps {
   onNavigate: (page: string) => void;
@@ -109,17 +109,7 @@ export function StockExplorer({ onNavigate, onSelectStock }: StockExplorerProps)
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleLoadSample = () => {
-    const csv = generateSampleCSV();
-    processCSV(csv, 'SYNTHETIC_DEMO');
-    // The processCSV function will set warnings; we add synthetic data notice
-    setTimeout(() => {
-      setImportWarnings(prev => [
-        'SYNTHETIC DATA: This is randomly generated demonstration data, NOT real market prices. Do not use for investment decisions.',
-        ...prev,
-      ]);
-    }, 0);
-  };
+
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -148,10 +138,7 @@ export function StockExplorer({ onNavigate, onSelectStock }: StockExplorerProps)
               Upload CSV
             </Button>
           </label>
-          <Button variant="secondary" onClick={handleLoadSample}>
-            <Database size={16} />
-            Load Sample Data
-          </Button>
+
         </div>
 
         {importStatus === 'success' && (
@@ -197,7 +184,7 @@ export function StockExplorer({ onNavigate, onSelectStock }: StockExplorerProps)
           title={datasets.length === 0 ? 'No Data Imported' : 'No Results'}
           description={
             datasets.length === 0
-              ? 'Import a CSV file or load sample data to begin analysing stocks.'
+              ? 'Import a CSV file or connect to Investo API to begin analysing stocks.'
               : 'No stocks match your search query.'
           }
         />

@@ -29,19 +29,29 @@ export function investoStockToInfo(stock: InvestoStock, fetchedAt: string): Stoc
 /**
  * Convert Investo price bars into PREDICTA PriceRecord[].
  * 
- * Important notes from Investo docs:
- * - high/low can be null (genuine gaps in upstream feed, never fabricated)
- * - close and volume are complete
- * - We treat OHLC as CV-first data (close + volume are reliable)
+ * IMPORTANT: We do NOT fabricate missing OHLC values.
+ * - If open/high/low are missing, we exclude the bar entirely
+ * - Only bars with complete OHLC data are included
+ * - Volume defaults to 0 if missing (acceptable for analysis)
+ * - This prevents misleading candlestick charts and technical indicators
  */
 export function investoPricesToRecords(bars: InvestoPriceBar[]): PriceRecord[] {
   return bars
-    .filter(bar => bar.close !== null && bar.close > 0)
+    // Only include bars with complete OHLC data
+    .filter(bar => {
+      // Must have valid close price
+      if (bar.close === null || bar.close <= 0) return false;
+      // Must have open, high, low (not null)
+      if (bar.open === null || bar.high === null || bar.low === null) return false;
+      // High must be >= Low (valid candle)
+      if (bar.high < bar.low) return false;
+      return true;
+    })
     .map(bar => ({
       date: bar.date,
-      open: bar.open ?? bar.close, // If open is null, use close (honest fallback)
-      high: bar.high ?? bar.close, // If high is null, use close
-      low: bar.low ?? bar.close,   // If low is null, use close
+      open: bar.open!,
+      high: bar.high!,
+      low: bar.low!,
       close: bar.close,
       volume: bar.volume ?? 0,
     }))

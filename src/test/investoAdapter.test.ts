@@ -29,27 +29,26 @@ describe('Investo Adapter', () => {
       expect(records[0].volume).toBe(1000000);
     });
 
-    it('should handle null high/low values (use close as fallback)', () => {
+    it('should exclude bars with null high/low values (no fabrication)', () => {
       const bars: InvestoPriceBar[] = [
         { date: '2024-01-01', open: 100, high: null, low: null, close: 102, volume: 1000000 },
       ];
 
       const records = investoPricesToRecords(bars);
 
-      expect(records).toHaveLength(1);
-      expect(records[0].high).toBe(102); // Fallback to close
-      expect(records[0].low).toBe(102);  // Fallback to close
+      // Should exclude incomplete candle
+      expect(records).toHaveLength(0);
     });
 
-    it('should handle null open value (use close as fallback)', () => {
+    it('should exclude bars with null open value (no fabrication)', () => {
       const bars: InvestoPriceBar[] = [
         { date: '2024-01-01', open: null, high: 105, low: 98, close: 102, volume: 1000000 },
       ];
 
       const records = investoPricesToRecords(bars);
 
-      expect(records).toHaveLength(1);
-      expect(records[0].open).toBe(102); // Fallback to close
+      // Should exclude incomplete candle
+      expect(records).toHaveLength(0);
     });
 
     it('should handle null volume (default to 0)', () => {
