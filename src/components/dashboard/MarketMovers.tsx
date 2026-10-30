@@ -17,6 +17,7 @@ interface MoverData {
   symbol: string;
   name: string;
   exchange: string;
+  currency: string;
   lastPrice: number;
   dailyChange: number;
   dailyChangePercent: number;
@@ -66,6 +67,7 @@ export function MarketMovers({ onSelectStock }: MarketMoversProps) {
         symbol: info.symbol,
         name: info.name,
         exchange: info.exchange,
+        currency: info.currency,
         lastPrice,
         dailyChange,
         dailyChangePercent,
@@ -111,7 +113,7 @@ export function MarketMovers({ onSelectStock }: MarketMoversProps) {
         </div>
         <div className="text-right ml-2">
           <p className="text-sm font-mono font-bold text-[var(--color-text-primary)]">
-            {formatPrice(mover.lastPrice, 'USD')}
+            {formatPrice(mover.lastPrice, mover.currency)}
           </p>
           <p className={`text-[11px] font-mono ${getChangeColor(mover.dailyChangePercent)}`}>
             {formatPercent(mover.dailyChangePercent)}

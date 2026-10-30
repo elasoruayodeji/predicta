@@ -3,11 +3,11 @@
 // ============================================================
 import React, { useRef, useState } from 'react';
 import { useAppState, useAllDatasets } from '../../store/AppContext';
-import { parseCSV, generateSampleCSV } from '../../utils/csv';
+import { parseCSV } from '../../utils/csv';
 import { validatePriceData, cleanPriceData } from '../../engine/dataValidation';
 import { Button, MetricCard } from '../common';
 import { formatDate } from '../../utils/formatters';
-import { Upload, Database, FileText, CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react';
+import { Upload, Database, CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react';
 
 export function DataImportPage() {
   const { state, dispatch } = useAppState();
@@ -93,18 +93,6 @@ export function DataImportPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleLoadSample = () => {
-    const csv = generateSampleCSV();
-    processCSV(csv, 'SYNTHETIC_DEMO');
-    // Add synthetic data warning
-    setTimeout(() => {
-      setImportWarnings(prev => [
-        'SYNTHETIC DATA: This is randomly generated demonstration data, NOT real market prices. Do not use for investment decisions. Import real CSV data for actual analysis.',
-        ...prev,
-      ]);
-    }, 0);
-  };
-
   const handleRemoveDataset = (symbol: string) => {
     dispatch({ type: 'REMOVE_DATASET', payload: symbol });
   };
@@ -137,10 +125,6 @@ export function DataImportPage() {
                 Choose File
               </Button>
             </label>
-            <Button variant="secondary" onClick={handleLoadSample}>
-              <FileText size={16} />
-              Load Demo Data
-            </Button>
           </div>
           <p className="text-[11px] text-[var(--color-text-muted)] mt-3">
             Max file size: 10MB · Supported formats: CSV, TXT
