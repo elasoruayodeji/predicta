@@ -18,6 +18,9 @@ import { StockScreener } from './components/screener/StockScreener';
 import { PortfolioTracker } from './components/portfolio/PortfolioTracker';
 import { ValuationWorkbench } from './components/valuation/ValuationWorkbench';
 import { InvestmentJournal } from './components/journal/InvestmentJournal';
+import { MarketSignals } from './components/signals/MarketSignals';
+import { AlertsPage } from './components/alerts/AlertsPage';
+import { InvestmentCalendar } from './components/calendar/InvestmentCalendar';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -66,6 +69,12 @@ function AppContent() {
         return <ValuationWorkbench />;
       case 'journal':
         return <InvestmentJournal onNavigate={handleNavigate} />;
+      case 'signals':
+        return <MarketSignals onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
+      case 'alerts':
+        return <AlertsPage onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
+      case 'calendar':
+        return <InvestmentCalendar onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
       case 'data':
         return <DataImportPage />;
       case 'settings':
