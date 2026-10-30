@@ -149,13 +149,30 @@ describe('Storage Layer', () => {
   describe('saveSettings / loadSettings', () => {
     it('should save and load settings', () => {
       const settings: AppSettings = {
+        userName: 'Test User',
+        userEmail: 'test@example.com',
         currency: 'USD',
         dateFormat: 'YYYY-MM-DD',
+        timeFormat: '24h',
+        timezone: 'Africa/Lagos',
+        numberFormat: 'standard',
         defaultHorizon: 10,
         riskTolerance: 'aggressive',
+        theme: 'dark',
+        compactMode: false,
+        defaultMarket: 'NGX',
+        preferredIndices: ['ASI'],
+        preferredSectors: [],
+        enablePriceAlerts: true,
+        enableMarketUpdates: true,
+        enableDividendNotifications: true,
+        enableAnnouncementNotifications: true,
+        enableResearchNotifications: true,
         dataProvider: 'test',
         apiKeyConfigured: true,
         autoRefresh: false,
+        shareAnonymousData: false,
+        enableAnalytics: false,
       };
 
       saveSettings(settings);

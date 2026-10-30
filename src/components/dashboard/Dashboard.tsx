@@ -1,13 +1,19 @@
 // ============================================================
-// Dashboard Page
+// Premium Dashboard - Financial Intelligence Workspace
 // ============================================================
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAppState } from '../../store/AppContext';
-import { MetricCard, EmptyState, DataImportPrompt, StatusBadge } from '../common';
+import { MetricCard, EmptyState, StatusBadge } from '../common';
 import { InvestoConnectionStatus } from '../common/InvestoConnectionStatus';
 import { MarketMovers } from './MarketMovers';
 import { formatPrice, formatPercent, formatDate, formatVolume, getChangeColor } from '../../utils/formatters';
-import { Database, TrendingUp, AlertTriangle, FileText, BarChart3, Activity } from 'lucide-react';
+import { calculateHistoricalStatistics } from '../../engine/statistics';
+import { 
+  Database, TrendingUp, AlertTriangle, FileText, BarChart3, Activity,
+  Eye, Clock, Star, Plus, ArrowRight, Bell, Calendar, Zap, Target,
+  PieChart as PieChartIcon, TrendingDown, Award, Globe
+} from 'lucide-react';
+import { LineChart, Line, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 interface DashboardProps {
   onNavigate: (page: string) => void;
@@ -17,19 +23,162 @@ interface DashboardProps {
 export function Dashboard({ onNavigate, onSelectStock }: DashboardProps) {
   const { state } = useAppState();
   const datasets = Array.from(state.datasets.values());
+  const userName = state.settings.userName || 'Investor';
 
-if (datasets.length === 0) {
-  return (
-    <DataImportPrompt
-      onImport={() => onNavigate('data')}
-      onBrowseInvesto={() => onNavigate('explore')}
-    />
-  );
-}
+  // Calculate portfolio metrics if transactions exist
+  const portfolioData = useMemo(() => {
+    const transactions = JSON.parse(localStorage.getItem('predicta_portfolio_transactions') || '[]');
+    if (transactions.length === 0) return null;
+
+    // Calculate total portfolio value from holdings
+    let totalValue = 0;
+    let totalCost = 0;
+    const holdings: { symbol: string; value: number; weight: number }[] = [];
+
+    // Group by symbol and calculate
+    const bySymbol = new Map<string, any[]>();
+    transactions.forEach((tx: any) => {
+      if (!bySymbol.has(tx.symbol)) bySymbol.set(tx.symbol, []);
+      bySymbol.get(tx.symbol)!.push(tx);
+    });
+
+    bySymbol.forEach((txs, symbol) => {
+      const dataset = datasets.find(d => d.info.symbol === symbol);
+      if (!dataset || dataset.prices.length === 0) return;
+
+      const currentPrice = dataset.prices[dataset.prices.length - 1].close;
+      let quantity = 0;
+      let cost = 0;
+
+      txs.forEach((tx: any) => {
+        if (tx.type === 'buy') {
+          quantity += tx.quantity;
+          cost += tx.quantity * tx.price;
+        } else if (tx.type === 'sell') {
+          quantity -= tx.quantity;
+          cost -= tx.quantity * (cost / (quantity + tx.quantity));
+        }
+      });
+
+      if (quantity > 0) {
+        const value = quantity * currentPrice;
+        totalValue += value;
+        totalCost += cost;
+        holdings.push({ symbol, value, weight: 0 });
+      }
+    });
+
+    // Calculate weights
+    holdings.forEach(h => h.weight = (h.value / totalValue) * 100);
+
+    const dailyChange = totalValue - totalCost;
+    const dailyChangePercent = totalCost > 0 ? (dailyChange / totalCost) * 100 : 0;
+
+    return {
+      totalValue,
+      totalCost,
+      dailyChange,
+      dailyChangePercent,
+      holdings: holdings.sort((a, b) => b.weight - a.weight),
+      holdingsCount: holdings.length,
+    };
+  }, [datasets]);
+
+  // Get market indices (simulated - in real app would come from API)
+  const marketIndices = useMemo(() => {
+    return [
+      { name: 'NGX All-Share Index', value: 68542.31, change: 1.24, changePercent: 0.018 },
+      { name: 'NGX 30', value: 4218.76, change: -0.87, changePercent: -0.021 },
+      { name: 'NGX Premium Board', value: 12453.92, change: 0.56, changePercent: 0.0045 },
+    ];
+  }, []);
+
+  // Recent activity
+  const recentActivity = useMemo(() => {
+    const activities: { type: string; symbol: string; action: string; time: string }[] = [];
+    
+    // Add recent reports
+    state.reports.slice(0, 3).forEach(report => {
+      activities.push({
+        type: 'report',
+        symbol: report.stockSymbol,
+        action: 'Research report generated',
+        time: report.generatedAt,
+      });
+    });
+
+    // Add recent imports
+    datasets.slice(0, 3).forEach(ds => {
+      activities.push({
+        type: 'import',
+        symbol: ds.info.symbol,
+        action: 'Data imported',
+        time: ds.info.importedAt,
+      });
+    });
+
+    return activities.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
+  }, [state.reports, datasets]);
+
+  // Watchlist preview
+  const watchlistPreview = useMemo(() => {
+    return state.watchlist.slice(0, 5).map(item => {
+      const dataset = datasets.find(d => d.info.symbol === item.symbol);
+      if (!dataset || dataset.prices.length === 0) return null;
+
+      const lastPrice = dataset.prices[dataset.prices.length - 1].close;
+      const prevPrice = dataset.prices.length > 1 ? dataset.prices[dataset.prices.length - 2].close : lastPrice;
+      const change = lastPrice - prevPrice;
+      const changePercent = prevPrice > 0 ? (change / prevPrice) * 100 : 0;
+
+      return {
+        symbol: item.symbol,
+        name: item.name,
+        price: lastPrice,
+        change,
+        changePercent,
+        sparkline: dataset.prices.slice(-30).map(p => ({ value: p.close })),
+      };
+    }).filter((w): w is NonNullable<typeof w> => w !== null);
+  }, [state.watchlist, datasets]);
+
+  if (datasets.length === 0) {
+    return (
+      <div className="space-y-6 max-w-7xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">Welcome to PREDICTA</h2>
+            <p className="text-sm text-[var(--color-text-muted)] mt-1">Your NGX financial intelligence workspace</p>
+          </div>
+          <InvestoConnectionStatus />
+        </div>
+        <EmptyState
+          icon={<Database size={48} />}
+          title="Get Started with PREDICTA"
+          description="Import stock data to begin analyzing the Nigerian Exchange. You can import data from the Investo API or upload CSV files."
+          action={
+            <div className="flex gap-3">
+              <button
+                onClick={() => onNavigate('data')}
+                className="px-5 py-2.5 text-sm font-medium rounded-lg bg-[var(--color-accent-blue)] text-white hover:bg-[var(--color-accent-blue-dim)] transition-colors"
+              >
+                Import Data
+              </button>
+              <button
+                onClick={() => onNavigate('explore')}
+                className="px-5 py-2.5 text-sm font-medium rounded-lg bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border border-[var(--color-border-primary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+              >
+                Browse Stocks
+              </button>
+            </div>
+          }
+        />
+      </div>
+    );
+  }
 
   const totalRecords = datasets.reduce((sum, d) => sum + d.info.recordCount, 0);
   const totalAnomalies = Array.from(state.anomalies.values()).reduce((sum, a) => sum + a.length, 0);
-  const latestDataset = datasets[datasets.length - 1];
 
   const handleSelectStock = (symbol: string) => {
     if (onSelectStock) {
@@ -41,11 +190,101 @@ if (datasets.length === 0) {
 
   return (
     <div className="space-y-6 max-w-7xl">
-      {/* Connection Status */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Dashboard</h2>
+      {/* Welcome Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">
+            Welcome back, {userName}
+          </h2>
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">
+            Here's your market intelligence overview for {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
         <InvestoConnectionStatus />
       </div>
+
+      {/* Market Indices */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {marketIndices.map((index, idx) => (
+          <div key={idx} className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{index.name}</p>
+                <p className="text-xl font-bold text-[var(--color-text-primary)] font-mono mt-1">
+                  {index.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <Globe size={20} className="text-[var(--color-accent-blue)]" />
+            </div>
+            <div className="flex items-center gap-2">
+              {index.change >= 0 ? (
+                <TrendingUp size={14} className="text-[var(--color-positive)]" />
+              ) : (
+                <TrendingDown size={14} className="text-[var(--color-negative)]" />
+              )}
+              <span className={`text-sm font-mono font-semibold ${getChangeColor(index.change)}`}>
+                {index.change >= 0 ? '+' : ''}{index.change.toFixed(2)} ({index.changePercent >= 0 ? '+' : ''}{(index.changePercent * 100).toFixed(2)}%)
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Portfolio Overview (if exists) */}
+      {portfolioData && (
+        <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <PieChartIcon size={18} className="text-[var(--color-accent-blue)]" />
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Portfolio Overview</h3>
+            </div>
+            <button
+              onClick={() => onNavigate('portfolio')}
+              className="text-xs text-[var(--color-accent-blue)] hover:underline flex items-center gap-1"
+            >
+              View Details <ArrowRight size={12} />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <MetricCard
+                  label="Total Value"
+                  value={formatPrice(portfolioData.totalValue, state.settings.currency)}
+                  icon={<Award size={16} className="text-[var(--color-accent-blue)]" />}
+                />
+                <MetricCard
+                  label="Daily P&L"
+                  value={formatPrice(portfolioData.dailyChange, state.settings.currency)}
+                  change={portfolioData.dailyChangePercent / 100}
+                  variant={portfolioData.dailyChange >= 0 ? 'positive' : 'negative'}
+                />
+                <MetricCard
+                  label="Holdings"
+                  value={portfolioData.holdingsCount.toString()}
+                  icon={<Activity size={16} className="text-[var(--color-positive)]" />}
+                />
+                <MetricCard
+                  label="Total Return"
+                  value={formatPercent(portfolioData.dailyChangePercent / 100)}
+                  variant={portfolioData.dailyChangePercent >= 0 ? 'positive' : 'negative'}
+                />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-[var(--color-text-muted)] mb-2">Top Holdings</p>
+              <div className="space-y-2">
+                {portfolioData.holdings.slice(0, 3).map((holding, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-[var(--color-text-primary)]">{holding.symbol}</span>
+                    <span className="text-[var(--color-text-muted)] font-mono">{holding.weight.toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Overview Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -75,118 +314,173 @@ if (datasets.length === 0) {
         />
       </div>
 
-      {/* Market Movers */}
-      <MarketMovers onSelectStock={handleSelectStock} />
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Watchlist & Activity */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Watchlist Preview */}
+          {watchlistPreview.length > 0 && (
+            <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl">
+              <div className="p-4 border-b border-[var(--color-border-primary)] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Star size={16} className="text-[var(--color-warning)]" />
+                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Watchlist</h3>
+                </div>
+                <button
+                  onClick={() => onNavigate('watchlist')}
+                  className="text-xs text-[var(--color-accent-blue)] hover:underline flex items-center gap-1"
+                >
+                  View All <ArrowRight size={12} />
+                </button>
+              </div>
+              <div className="divide-y divide-[var(--color-border-primary)]">
+                {watchlistPreview.map((stock, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 hover:bg-[var(--color-bg-hover)] cursor-pointer transition-colors"
+                    onClick={() => handleSelectStock(stock.symbol)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-[var(--color-text-primary)]">{stock.symbol}</span>
+                          <span className="text-xs text-[var(--color-text-muted)]">{stock.name}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="w-20 h-8">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={stock.sparkline}>
+                              <Line
+                                type="monotone"
+                                dataKey="value"
+                                stroke={stock.change >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}
+                                strokeWidth={1.5}
+                                dot={false}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-mono font-bold text-[var(--color-text-primary)]">
+                            {formatPrice(stock.price, state.settings.currency)}
+                          </p>
+                          <p className={`text-xs font-mono ${getChangeColor(stock.changePercent)}`}>
+                            {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-      {/* Recent Datasets */}
-      <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl">
-        <div className="p-4 border-b border-[var(--color-border-primary)] flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Imported Datasets</h3>
-          <button 
-            onClick={() => onNavigate('data')}
-            className="text-xs text-[var(--color-accent-blue)] hover:underline"
-          >
-            Import More
-          </button>
+          {/* Market Movers */}
+          <MarketMovers onSelectStock={handleSelectStock} />
         </div>
-        <div className="divide-y divide-[var(--color-border-primary)]">
-          {datasets.map(ds => {
-            const lastPrice = ds.prices[ds.prices.length - 1];
-            const firstPrice = ds.prices[0];
-            const totalReturn = lastPrice && firstPrice 
-              ? ((lastPrice.close / firstPrice.close) - 1) 
-              : 0;
-            const anomalyCount = state.anomalies.get(ds.info.symbol)?.length ?? 0;
 
-            return (
-              <div 
-                key={ds.info.symbol}
-                className="p-4 hover:bg-[var(--color-bg-hover)] cursor-pointer transition-colors"
-                onClick={() => onNavigate('analysis')}
+        {/* Right Column - Recent Activity & Quick Actions */}
+        <div className="space-y-6">
+          {/* Recent Activity */}
+          {recentActivity.length > 0 && (
+            <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl">
+              <div className="p-4 border-b border-[var(--color-border-primary)]">
+                <div className="flex items-center gap-2">
+                  <Clock size={16} className="text-[var(--color-accent-blue)]" />
+                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Recent Activity</h3>
+                </div>
+              </div>
+              <div className="divide-y divide-[var(--color-border-primary)]">
+                {recentActivity.map((activity, idx) => (
+                  <div key={idx} className="p-3 hover:bg-[var(--color-bg-hover)] transition-colors">
+                    <div className="flex items-start gap-2">
+                      {activity.type === 'report' ? (
+                        <FileText size={14} className="text-[var(--color-forecast)] mt-0.5" />
+                      ) : (
+                        <Database size={14} className="text-[var(--color-accent-blue)] mt-0.5" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-[var(--color-text-primary)]">
+                          <span className="font-semibold">{activity.symbol}</span>
+                          {' '}{activity.action}
+                        </p>
+                        <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
+                          {formatDate(activity.time.split('T')[0])}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Actions */}
+          <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Zap size={16} className="text-[var(--color-warning)]" />
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Quick Actions</h3>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={() => onNavigate('explore')}
+                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors text-left"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[var(--color-bg-tertiary)] flex items-center justify-center">
-                      <BarChart3 size={18} className="text-[var(--color-accent-blue)]" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--color-text-primary)]">{ds.info.symbol}</p>
-                      <p className="text-xs text-[var(--color-text-muted)]">{ds.info.name} · {ds.info.exchange}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-mono font-semibold text-[var(--color-text-primary)]">
-                      {formatPrice(lastPrice?.close ?? 0, ds.info.currency)}
-                    </p>
-                    <p className={`text-xs font-mono ${getChangeColor(totalReturn)}`}>
-                      {formatPercent(totalReturn)} total
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 mt-2 text-[11px] text-[var(--color-text-muted)]">
-                  <span>{ds.info.recordCount.toLocaleString()} records</span>
-                  <span>{formatDate(ds.info.dateRange.start)} — {formatDate(ds.info.dateRange.end)}</span>
-                  <span className="capitalize">{ds.quality.overallScore} quality</span>
-                  {anomalyCount > 0 && (
-                    <span className="text-[var(--color-warning)]">{anomalyCount} anomalies</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Recent Reports */}
-      {state.reports.length > 0 && (
-        <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl">
-          <div className="p-4 border-b border-[var(--color-border-primary)]">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Recent Reports</h3>
+                <Plus size={14} className="text-[var(--color-accent-blue)]" />
+                <span className="text-xs text-[var(--color-text-primary)]">Add Stock to Watchlist</span>
+              </button>
+              <button
+                onClick={() => onNavigate('portfolio')}
+                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors text-left"
+              >
+                <Target size={14} className="text-[var(--color-positive)]" />
+                <span className="text-xs text-[var(--color-text-primary)]">Track Portfolio</span>
+              </button>
+              <button
+                onClick={() => onNavigate('forecast')}
+                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors text-left"
+              >
+                <TrendingUp size={14} className="text-[var(--color-forecast)]" />
+                <span className="text-xs text-[var(--color-text-primary)]">Run Forecast</span>
+              </button>
+              <button
+                onClick={() => onNavigate('reports')}
+                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors text-left"
+              >
+                <FileText size={14} className="text-[var(--color-text-muted)]" />
+                <span className="text-xs text-[var(--color-text-primary)]">Generate Report</span>
+              </button>
+            </div>
           </div>
-          <div className="divide-y divide-[var(--color-border-primary)]">
-            {state.reports.slice(0, 5).map(report => (
-              <div key={report.id} className="p-4 hover:bg-[var(--color-bg-hover)] transition-colors">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">{report.stockSymbol}</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      Generated {formatDate(report.generatedAt.split('T')[0])}
-                    </p>
-                  </div>
-                  <StatusBadge status={report.forecasts[0]?.status ?? 'experimental'} />
-                </div>
+
+          {/* Data Freshness */}
+          <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Bell size={16} className="text-[var(--color-accent-blue)]" />
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Data Status</h3>
+            </div>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--color-text-muted)]">Last Updated</span>
+                <span className="text-[var(--color-text-primary)] font-mono">
+                  {datasets.length > 0 ? formatDate(datasets[datasets.length - 1].info.importedAt.split('T')[0]) : '—'}
+                </span>
               </div>
-            ))}
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--color-text-muted)]">Data Source</span>
+                <span className="text-[var(--color-text-primary)]">
+                  {datasets.length > 0 ? datasets[0].info.dataSource : '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--color-text-muted)]">Total Records</span>
+                <span className="text-[var(--color-text-primary)] font-mono">{totalRecords.toLocaleString()}</span>
+              </div>
+            </div>
           </div>
         </div>
-      )}
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <button
-          onClick={() => onNavigate('explore')}
-          className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl hover:border-[var(--color-accent-blue)]/30 transition-colors text-left"
-        >
-          <TrendingUp size={20} className="text-[var(--color-accent-blue)] mb-2" />
-          <p className="text-sm font-semibold text-[var(--color-text-primary)]">Analyse a Stock</p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">View historical data and statistics</p>
-        </button>
-        <button
-          onClick={() => onNavigate('forecast')}
-          className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl hover:border-[var(--color-forecast)]/30 transition-colors text-left"
-        >
-          <TrendingUp size={20} className="text-[var(--color-forecast)] mb-2" />
-          <p className="text-sm font-semibold text-[var(--color-text-primary)]">Run Forecast</p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">Generate predictions with uncertainty</p>
-        </button>
-        <button
-          onClick={() => onNavigate('laboratory')}
-          className="p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl hover:border-[var(--color-positive)]/30 transition-colors text-left"
-        >
-          <BarChart3 size={20} className="text-[var(--color-positive)] mb-2" />
-          <p className="text-sm font-semibold text-[var(--color-text-primary)]">Compare Models</p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">Walk-forward backtesting results</p>
-        </button>
       </div>
     </div>
   );
