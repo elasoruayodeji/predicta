@@ -18,9 +18,14 @@ export function Dashboard({ onNavigate, onSelectStock }: DashboardProps) {
   const { state } = useAppState();
   const datasets = Array.from(state.datasets.values());
 
-  if (datasets.length === 0) {
-    return <DataImportPrompt onImport={() => onNavigate('data')} />;
-  }
+if (datasets.length === 0) {
+  return (
+    <DataImportPrompt
+      onImport={() => onNavigate('data')}
+      onBrowseInvesto={() => onNavigate('explore')}
+    />
+  );
+}
 
   const totalRecords = datasets.reduce((sum, d) => sum + d.info.recordCount, 0);
   const totalAnomalies = Array.from(state.anomalies.values()).reduce((sum, a) => sum + a.length, 0);
