@@ -35,13 +35,43 @@ type Action =
   | { type: 'LOAD_FROM_STORAGE'; payload: Partial<AppState> };
 
 const defaultSettings: AppSettings = {
+  // Profile
+  userName: '',
+  userEmail: '',
+  
+  // Preferences
   currency: 'NGN',
   dateFormat: 'YYYY-MM-DD',
+  timeFormat: '24h',
+  timezone: 'Africa/Lagos',
+  numberFormat: 'standard',
   defaultHorizon: 5,
   riskTolerance: 'moderate',
+  
+  // Appearance
+  theme: 'dark',
+  compactMode: false,
+  
+  // Market Preferences
+  defaultMarket: 'NGX',
+  preferredIndices: ['ASI', 'NGX-30'],
+  preferredSectors: [],
+  
+  // Notifications
+  enablePriceAlerts: true,
+  enableMarketUpdates: true,
+  enableDividendNotifications: true,
+  enableAnnouncementNotifications: true,
+  enableResearchNotifications: true,
+  
+  // Data
   dataProvider: null,
   apiKeyConfigured: false,
   autoRefresh: false,
+  
+  // Privacy
+  shareAnonymousData: false,
+  enableAnalytics: false,
 };
 
 const initialState: AppState = {

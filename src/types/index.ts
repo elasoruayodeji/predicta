@@ -160,13 +160,43 @@ export interface WatchlistItem {
 }
 
 export interface AppSettings {
+  // Profile
+  userName?: string;
+  userEmail?: string;
+  
+  // Preferences
   currency: string;
   dateFormat: string;
+  timeFormat: '12h' | '24h';
+  timezone: string;
+  numberFormat: 'standard' | 'compact';
   defaultHorizon: number;
   riskTolerance: 'conservative' | 'moderate' | 'aggressive';
+  
+  // Appearance
+  theme: 'dark' | 'light' | 'system';
+  compactMode: boolean;
+  
+  // Market Preferences
+  defaultMarket: string;
+  preferredIndices: string[];
+  preferredSectors: string[];
+  
+  // Notifications
+  enablePriceAlerts: boolean;
+  enableMarketUpdates: boolean;
+  enableDividendNotifications: boolean;
+  enableAnnouncementNotifications: boolean;
+  enableResearchNotifications: boolean;
+  
+  // Data
   dataProvider: string | null;
   apiKeyConfigured: boolean;
   autoRefresh: boolean;
+  
+  // Privacy
+  shareAnonymousData: boolean;
+  enableAnalytics: boolean;
 }
 
 export type ForecastHorizon = 1 | 5 | 20 | 60;
