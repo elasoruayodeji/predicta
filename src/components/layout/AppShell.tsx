@@ -54,7 +54,7 @@ export function AppShell({ children, currentPage, onNavigate }: AppShellProps) {
               <TrendingUp size={18} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-[var(--color-text-primary)] tracking-tight">PREDICTA</h1>
+              <h1 className="text-lg font-bold text-[#FF2D95] tracking-tight">PREDICTA</h1>
               <p className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">Quantitative Research</p>
             </div>
           </div>
