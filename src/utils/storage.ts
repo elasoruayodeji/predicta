@@ -15,6 +15,14 @@ const STORAGE_KEYS = {
   ANOMALIES: 'predicta_anomalies',
 };
 
+/**
+ * Get user-scoped storage key
+ */
+function getUserKey(baseKey: string, userId?: string): string {
+  if (!userId) return baseKey;
+  return `${baseKey}_${userId}`;
+}
+
 const MAX_STORAGE_SIZE = 4.5 * 1024 * 1024; // 4.5MB safe limit (localStorage is typically 5MB)
 
 /**
@@ -114,49 +122,66 @@ export function clearAllStorage(): boolean {
 // Specific save/load functions for each data type
 // ============================================================
 
-export function saveDatasets(datasets: Map<string, StockDataset>): boolean {
+export function saveDatasets(datasets: Map<string, StockDataset>, userId?: string): boolean {
   // Convert Map to object for serialization
   const obj = Object.fromEntries(datasets);
-  return saveToStorage(STORAGE_KEYS.DATASETS, obj);
+  return saveToStorage(getUserKey(STORAGE_KEYS.DATASETS, userId), obj);
 }
 
-export function loadDatasets(): Map<string, StockDataset> {
-  const obj = loadFromStorage<Record<string, StockDataset>>(STORAGE_KEYS.DATASETS, {});
+export function loadDatasets(userId?: string): Map<string, StockDataset> {
+  const obj = loadFromStorage<Record<string, StockDataset>>(getUserKey(STORAGE_KEYS.DATASETS, userId), {});
   return new Map(Object.entries(obj));
 }
 
-export function saveWatchlist(watchlist: WatchlistItem[]): boolean {
-  return saveToStorage(STORAGE_KEYS.WATCHLIST, watchlist);
+export function saveWatchlist(watchlist: WatchlistItem[], userId?: string): boolean {
+  return saveToStorage(getUserKey(STORAGE_KEYS.WATCHLIST, userId), watchlist);
 }
 
-export function loadWatchlist(): WatchlistItem[] {
-  return loadFromStorage<WatchlistItem[]>(STORAGE_KEYS.WATCHLIST, []);
+export function loadWatchlist(userId?: string): WatchlistItem[] {
+  return loadFromStorage<WatchlistItem[]>(getUserKey(STORAGE_KEYS.WATCHLIST, userId), []);
 }
 
-export function saveSettings(settings: AppSettings): boolean {
-  return saveToStorage(STORAGE_KEYS.SETTINGS, settings);
+export function saveSettings(settings: AppSettings, userId?: string): boolean {
+  return saveToStorage(getUserKey(STORAGE_KEYS.SETTINGS, userId), settings);
 }
 
-export function loadSettings(defaultSettings: AppSettings): AppSettings {
-  return loadFromStorage<AppSettings>(STORAGE_KEYS.SETTINGS, defaultSettings);
+export function loadSettings(defaultSettings: AppSettings, userId?: string): AppSettings {
+  return loadFromStorage<AppSettings>(getUserKey(STORAGE_KEYS.SETTINGS, userId), defaultSettings);
 }
 
-export function saveReports(reports: ResearchReport[]): boolean {
-  return saveToStorage(STORAGE_KEYS.REPORTS, reports);
+export function saveReports(reports: ResearchReport[], userId?: string): boolean {
+  return saveToStorage(getUserKey(STORAGE_KEYS.REPORTS, userId), reports);
 }
 
-export function loadReports(): ResearchReport[] {
-  return loadFromStorage<ResearchReport[]>(STORAGE_KEYS.REPORTS, []);
+export function loadReports(userId?: string): ResearchReport[] {
+  return loadFromStorage<ResearchReport[]>(getUserKey(STORAGE_KEYS.REPORTS, userId), []);
 }
 
-export function saveAnomalies(anomalies: Map<string, AnomalyEvent[]>): boolean {
+export function saveAnomalies(anomalies: Map<string, AnomalyEvent[]>, userId?: string): boolean {
   const obj = Object.fromEntries(anomalies);
-  return saveToStorage(STORAGE_KEYS.ANOMALIES, obj);
+  return saveToStorage(getUserKey(STORAGE_KEYS.ANOMALIES, userId), obj);
 }
 
-export function loadAnomalies(): Map<string, AnomalyEvent[]> {
-  const obj = loadFromStorage<Record<string, AnomalyEvent[]>>(STORAGE_KEYS.ANOMALIES, {});
+export function loadAnomalies(userId?: string): Map<string, AnomalyEvent[]> {
+  const obj = loadFromStorage<Record<string, AnomalyEvent[]>>(getUserKey(STORAGE_KEYS.ANOMALIES, userId), {});
   return new Map(Object.entries(obj));
+}
+
+/**
+ * Clear all data for a specific user
+ */
+export function clearUserData(userId: string): boolean {
+  if (!isStorageAvailable()) return false;
+
+  try {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      localStorage.removeItem(getUserKey(key, userId));
+    });
+    return true;
+  } catch (error) {
+    console.error('Failed to clear user data', error);
+    return false;
+  }
 }
 
 /**

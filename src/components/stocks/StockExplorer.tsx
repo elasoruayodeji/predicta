@@ -113,7 +113,7 @@ export function StockExplorer({ onNavigate, onSelectStock }: StockExplorerProps)
 
   return (
     <div className="space-y-6 max-w-5xl">
-      {/* Investo API Browser — Real NGX Market Data */}
+      {/* Market Data Browser — Real NGX Market Data */}
       <InvestoBrowser onImportSuccess={() => setImportStatus('idle')} />
 
       {/* Import Section */}
@@ -184,7 +184,7 @@ export function StockExplorer({ onNavigate, onSelectStock }: StockExplorerProps)
           title={datasets.length === 0 ? 'No Data Imported' : 'No Results'}
           description={
             datasets.length === 0
-              ? 'Import a CSV file or connect to Investo API to begin analysing stocks.'
+              ? 'Import a CSV file or connect to market data to begin analysing stocks.'
               : 'No stocks match your search query.'
           }
         />
@@ -216,10 +216,10 @@ export function StockExplorer({ onNavigate, onSelectStock }: StockExplorerProps)
                           {ds.info.exchange}
                         </span>
                         {/* Data source badge */}
-                        {ds.info.dataSource === 'Investo API' && (
+                        {ds.info.dataSource === 'Market Data' && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-positive-dim)] text-[var(--color-positive)] font-bold flex items-center gap-1">
                             <Cloud size={8} />
-                            REAL DATA
+                            LIVE DATA
                           </span>
                         )}
                         {ds.info.dataSource === 'CSV Upload' && (

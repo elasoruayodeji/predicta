@@ -103,7 +103,7 @@ export function WatchlistPage({ onNavigate, onSelectStock }: WatchlistPageProps)
             Your Watchlist ({watchlist.length})
             {user && isConfigured && (
               <span className="ml-2 text-[10px] px-2 py-0.5 rounded bg-[var(--color-positive-dim)] text-[var(--color-positive)]">
-                Cloud Synced
+                Synced
               </span>
             )}
           </h3>

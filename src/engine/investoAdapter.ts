@@ -19,7 +19,7 @@ export function investoStockToInfo(stock: InvestoStock, fetchedAt: string): Stoc
     name: stock.name,
     exchange: 'NGX',
     currency: 'NGN',
-    dataSource: 'Investo API',
+    dataSource: 'Market Data',
     importedAt: fetchedAt,
     recordCount: 0, // Will be updated after prices are fetched
     dateRange: { start: '', end: '' }, // Will be updated after prices are fetched
@@ -74,7 +74,7 @@ export function investoToDataset(
     name: stock.name,
     exchange: 'NGX',
     currency: 'NGN',
-    dataSource: 'Investo API',
+    dataSource: 'Market Data',
     importedAt: fetchedAt,
     recordCount: prices.length,
     dateRange: {

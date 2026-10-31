@@ -461,7 +461,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               © 2024 PREDICTA. All rights reserved.
             </p>
             <p className="text-xs text-[var(--color-text-muted)]">
-              Data provided by Investo API • Not financial advice
+              Data provided by market data service • Not financial advice
             </p>
           </div>
         </div>

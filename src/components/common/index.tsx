@@ -120,7 +120,7 @@ export function DataImportPrompt({ onImport, onBrowse }: { onImport: () => void;
         <div className="space-y-2">
           <p>Import stock data to begin analysis. You have two options:</p>
           <ul className="text-left space-y-1 text-xs">
-            <li>• <strong>Investo API:</strong> NGX market data (146 equities)</li>
+            <li>• <strong>Market Data:</strong> NGX market data (146 equities)</li>
             <li>• <strong>CSV Import:</strong> Upload your own historical data.</li>
           </ul>
         </div>
@@ -138,7 +138,7 @@ export function DataImportPrompt({ onImport, onBrowse }: { onImport: () => void;
               onClick={onBrowse}
               className="px-5 py-2.5 text-sm font-medium rounded-lg bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border border-[var(--color-border-primary)] hover:bg-[var(--color-bg-hover)] transition-colors"
             >
-              Browse Investo API
+              Browse Market Data
             </button>
           )}
         </div>

@@ -26,7 +26,7 @@ export function MarketSignals({ onNavigate, onSelectStock }: MarketSignalsProps)
   const [filterDirection, setFilterDirection] = useState<string>('all');
   const [filterMateriality, setFilterMateriality] = useState<string>('all');
 
-  // Load signals from Investo API
+  // Load signals from market data service
   useEffect(() => {
     loadSignals();
   }, []);
@@ -150,7 +150,7 @@ export function MarketSignals({ onNavigate, onSelectStock }: MarketSignalsProps)
             <div className="space-y-2">
               <p>{error}</p>
               <p className="text-xs text-[var(--color-text-muted)]">
-                Market signals require the Investo API to be configured. 
+                Market signals require the market data service to be configured. 
                 Check your server configuration and API key.
               </p>
             </div>

@@ -127,7 +127,7 @@ describe('Investo Adapter', () => {
       expect(dataset.info.name).toBe('Guaranty Trust Holding Company Plc');
       expect(dataset.info.exchange).toBe('NGX');
       expect(dataset.info.currency).toBe('NGN');
-      expect(dataset.info.dataSource).toBe('Investo API');
+      expect(dataset.info.dataSource).toBe('Market Data');
       expect(dataset.info.importedAt).toBe(fetchedAt);
       expect(dataset.info.recordCount).toBe(2);
       expect(dataset.info.dateRange.start).toBe('2024-01-01');
