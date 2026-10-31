@@ -94,6 +94,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     if (!isSupabaseConfigured()) return;
+    
+    // Clear user-specific data before signing out
+    if (user) {
+      const { clearUserData } = await import('../utils/storage');
+      clearUserData(user.id);
+    }
+    
     await supabase.auth.signOut();
   };
 

@@ -1,7 +1,7 @@
 // ============================================================
 // Investo Data Browser
 // ============================================================
-// Lets users browse and import real NGX stock data from Investo API.
+// Lets users browse and import real NGX stock data from market data service.
 // Clearly labeled as REAL INVESTO DATA — never confused with CSV or synthetic.
 // ============================================================
 
@@ -106,7 +106,7 @@ export function InvestoBrowser({ onImportSuccess }: InvestoBrowserProps) {
       dispatch({ type: 'SET_DATASET', payload: dataset });
       setStatusMessage({ 
         type: 'success', 
-        text: `Imported ${dataset.prices.length} records for ${stock.symbol} from Investo API` 
+        text: `Imported ${dataset.prices.length} records for ${stock.symbol} from market data` 
       });
       onImportSuccess();
     } else {
@@ -130,10 +130,10 @@ export function InvestoBrowser({ onImportSuccess }: InvestoBrowserProps) {
           <Cloud size={20} className="text-[var(--color-text-muted)] mt-0.5" />
           <div className="flex-1">
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">
-              Investo API Not Configured
+              Market Data Not Configured
             </h3>
             <p className="text-xs text-[var(--color-text-secondary)] mb-3">
-              The PREDICTA server is running, but the Investo API key is not configured. 
+              The PREDICTA server is running, but the market data service is not configured. 
               To enable real NGX market data, set the <code className="px-1 py-0.5 bg-[var(--color-bg-tertiary)] rounded text-[10px]">INVESTO_API_KEY</code> environment variable and restart the server.
             </p>
             <div className="text-[11px] text-[var(--color-text-muted)] space-y-1">
@@ -163,7 +163,7 @@ export function InvestoBrowser({ onImportSuccess }: InvestoBrowserProps) {
             </p>
             <p className="text-xs text-[var(--color-text-muted)]">
               {serverStatus === 'checking' 
-                ? 'Verifying Investo API connection...' 
+                ? 'Verifying market data connection...' 
                 : 'Could not connect to the PREDICTA server. Is it running?'}
             </p>
           </div>

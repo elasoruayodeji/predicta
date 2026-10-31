@@ -9,7 +9,9 @@ import {
   saveSettings, loadSettings,
   saveReports, loadReports,
   saveAnomalies, loadAnomalies,
+  clearUserData,
 } from '../utils/storage';
+import { useAuth } from '../contexts/AuthContext';
 
 interface AppState {
   datasets: Map<string, StockDataset>;
@@ -140,37 +142,54 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const { user } = useAuth();
+  const userId = user?.id;
 
-  // Load from localStorage on mount
+  // Load user-specific data when user changes
   useEffect(() => {
-    const loadedDatasets = loadDatasets();
-    const loadedWatchlist = loadWatchlist();
-    const loadedSettings = loadSettings(defaultSettings);
-    const loadedReports = loadReports();
-    const loadedAnomalies = loadAnomalies();
+    if (userId) {
+      // Load data for this specific user
+      const loadedDatasets = loadDatasets(userId);
+      const loadedWatchlist = loadWatchlist(userId);
+      const loadedSettings = loadSettings(defaultSettings, userId);
+      const loadedReports = loadReports(userId);
+      const loadedAnomalies = loadAnomalies(userId);
 
-    dispatch({
-      type: 'LOAD_FROM_STORAGE',
-      payload: {
-        datasets: loadedDatasets,
-        watchlist: loadedWatchlist,
-        settings: loadedSettings,
-        reports: loadedReports,
-        anomalies: loadedAnomalies,
-      },
-    });
-  }, []);
+      dispatch({
+        type: 'LOAD_FROM_STORAGE',
+        payload: {
+          datasets: loadedDatasets,
+          watchlist: loadedWatchlist,
+          settings: loadedSettings,
+          reports: loadedReports,
+          anomalies: loadedAnomalies,
+        },
+      });
+    } else {
+      // No user signed in - reset to initial state
+      dispatch({
+        type: 'LOAD_FROM_STORAGE',
+        payload: {
+          datasets: new Map(),
+          watchlist: [],
+          settings: defaultSettings,
+          reports: [],
+          anomalies: new Map(),
+        },
+      });
+    }
+  }, [userId]);
 
   // Persist to localStorage on state changes (after initial load)
   useEffect(() => {
-    if (!state.storageLoaded) return;
+    if (!state.storageLoaded || !userId) return;
 
-    saveDatasets(state.datasets);
-    saveWatchlist(state.watchlist);
-    saveSettings(state.settings);
-    saveReports(state.reports);
-    saveAnomalies(state.anomalies);
-  }, [state.datasets, state.watchlist, state.settings, state.reports, state.anomalies, state.storageLoaded]);
+    saveDatasets(state.datasets, userId);
+    saveWatchlist(state.watchlist, userId);
+    saveSettings(state.settings, userId);
+    saveReports(state.reports, userId);
+    saveAnomalies(state.anomalies, userId);
+  }, [state.datasets, state.watchlist, state.settings, state.reports, state.anomalies, state.storageLoaded, userId]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>

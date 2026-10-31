@@ -681,7 +681,7 @@ export function SettingsPage() {
                     <div className="p-4 bg-[var(--color-bg-tertiary)] rounded-lg border border-[var(--color-border-primary)]">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-semibold text-[var(--color-text-primary)]">Investo API (NGX)</p>
+                          <p className="text-sm font-semibold text-[var(--color-text-primary)]">Market Data (NGX)</p>
                           <p className="text-xs text-[var(--color-text-muted)] mt-1">Real-time Nigerian Exchange data</p>
                         </div>
                         {investoStatus === 'checking' && (
@@ -828,7 +828,7 @@ export function SettingsPage() {
                       <li>• Investment journal and decision tracking</li>
                       <li>• Liquidity analysis and trading calendar</li>
                       <li>• Corporate actions processing</li>
-                      <li>• Real-time NGX data via Investo API</li>
+                      <li>• Real-time NGX market data</li>
                     </ul>
                   </div>
 
@@ -841,7 +841,7 @@ export function SettingsPage() {
                       </a>
                       <a href="https://investo.ng/developers" target="_blank" rel="noopener" className="flex items-center gap-2 text-[var(--color-accent-blue)] hover:underline">
                         <Database size={12} />
-                        Investo API Documentation
+                        Market Data Documentation
                       </a>
                     </div>
                   </div>
@@ -853,15 +853,13 @@ export function SettingsPage() {
             {saveStatus === 'saving' && (
               <div className="fixed bottom-6 right-6 bg-[var(--color-accent-blue)] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
                 <Loader2 size={16} className="animate-spin" />
-                <span className="text-sm font-medium">Saving to cloud...</span>
+                <span className="text-sm font-medium">Saving...</span>
               </div>
             )}
             {saveStatus === 'saved' && (
               <div className="fixed bottom-6 right-6 bg-[var(--color-positive)] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
                 <CheckCircle size={16} />
-                <span className="text-sm font-medium">
-                  {user && isAuthConfigured ? 'Saved to cloud' : 'Saved locally'}
-                </span>
+                <span className="text-sm font-medium">Changes saved</span>
               </div>
             )}
             {saveStatus === 'error' && errorMessage && (

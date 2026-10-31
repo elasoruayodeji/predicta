@@ -264,7 +264,7 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
       {user && isConfigured && (
         <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
           <span className="px-2 py-1 rounded bg-[var(--color-positive-dim)] text-[var(--color-positive)]">
-            Cloud Synced
+            Synced
           </span>
           <span>Your portfolio is synced across devices</span>
         </div>

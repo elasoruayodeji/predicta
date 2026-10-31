@@ -155,7 +155,7 @@ export function Dashboard({ onNavigate, onSelectStock }: DashboardProps) {
         <EmptyState
           icon={<Database size={48} />}
           title="Get Started with PREDICTA"
-          description="Import stock data to begin analyzing the Nigerian Exchange. You can import data from the Investo API or upload CSV files."
+          description="Import stock data to begin analyzing the Nigerian Exchange. You can import live market data or upload CSV files."
           action={
             <div className="flex gap-3">
               <button

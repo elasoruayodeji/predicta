@@ -1,7 +1,7 @@
 // ============================================================
 // Investo Connection Status Indicator
 // ============================================================
-// Shows the current status of the Investo API connection.
+// Shows the current status of the market data connection.
 // Used on dashboard and settings pages.
 // ============================================================
 
@@ -46,7 +46,7 @@ export function InvestoConnectionStatus() {
       icon: <CheckCircle size={14} />,
       color: 'text-[var(--color-positive)]',
       bgColor: 'bg-[var(--color-positive-dim)]',
-      label: 'Investo API Connected',
+      label: 'Market data connected',
     },
     not_configured: {
       icon: <AlertCircle size={14} />,
