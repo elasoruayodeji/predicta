@@ -71,9 +71,10 @@ export default async function handler(req, res) {
     });
   }
 
-  // Extract path after /api/investo
+  // Extract path after /api/investo (remove query string first)
   const fullPath = req.url || '';
-  const subPath = fullPath.replace(/^\/api\/investo/, '') || '/';
+  const pathWithoutQuery = fullPath.split('?')[0];
+  const subPath = pathWithoutQuery.replace(/^\/api\/investo/, '') || '/';
   const classified = classifyRoute(subPath);
 
   if (!classified) {
