@@ -10,7 +10,6 @@ import {
   saveReports, loadReports,
   saveAnomalies, loadAnomalies,
 } from '../utils/storage';
-import { useAuth } from '../contexts/AuthContext';
 
 interface AppState {
   datasets: Map<string, StockDataset>;
@@ -141,53 +140,37 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
-  const { user, isConfigured: isAuthConfigured } = useAuth();
 
-  // Load from localStorage on mount (fallback for unauthenticated users)
+  // Load from localStorage on mount
   useEffect(() => {
-    // Only load from localStorage if not authenticated or auth not configured
-    if (!user || !isAuthConfigured) {
-      const loadedDatasets = loadDatasets();
-      const loadedWatchlist = loadWatchlist();
-      const loadedSettings = loadSettings(defaultSettings);
-      const loadedReports = loadReports();
-      const loadedAnomalies = loadAnomalies();
+    const loadedDatasets = loadDatasets();
+    const loadedWatchlist = loadWatchlist();
+    const loadedSettings = loadSettings(defaultSettings);
+    const loadedReports = loadReports();
+    const loadedAnomalies = loadAnomalies();
 
-      dispatch({
-        type: 'LOAD_FROM_STORAGE',
-        payload: {
-          datasets: loadedDatasets,
-          watchlist: loadedWatchlist,
-          settings: loadedSettings,
-          reports: loadedReports,
-          anomalies: loadedAnomalies,
-        },
-      });
-    } else {
-      // For authenticated users, just mark as loaded (cloud data will be loaded by components)
-      dispatch({
-        type: 'LOAD_FROM_STORAGE',
-        payload: {
-          settings: defaultSettings,
-        },
-      });
-    }
-  }, [user, isAuthConfigured]);
+    dispatch({
+      type: 'LOAD_FROM_STORAGE',
+      payload: {
+        datasets: loadedDatasets,
+        watchlist: loadedWatchlist,
+        settings: loadedSettings,
+        reports: loadedReports,
+        anomalies: loadedAnomalies,
+      },
+    });
+  }, []);
 
-  // Persist to localStorage on state changes (only for unauthenticated users)
+  // Persist to localStorage on state changes (after initial load)
   useEffect(() => {
     if (!state.storageLoaded) return;
-    
-    // Only persist to localStorage if not authenticated
-    if (!user || !isAuthConfigured) {
-      saveDatasets(state.datasets);
-      saveWatchlist(state.watchlist);
-      saveSettings(state.settings);
-      saveReports(state.reports);
-      saveAnomalies(state.anomalies);
-    }
-    // For authenticated users, components should call dataService directly
-  }, [state.datasets, state.watchlist, state.settings, state.reports, state.anomalies, state.storageLoaded, user, isAuthConfigured]);
+
+    saveDatasets(state.datasets);
+    saveWatchlist(state.watchlist);
+    saveSettings(state.settings);
+    saveReports(state.reports);
+    saveAnomalies(state.anomalies);
+  }, [state.datasets, state.watchlist, state.settings, state.reports, state.anomalies, state.storageLoaded]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
