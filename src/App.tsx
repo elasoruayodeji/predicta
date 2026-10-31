@@ -29,6 +29,10 @@ import { InvestmentJournal } from './components/journal/InvestmentJournal';
 import { MarketSignals } from './components/signals/MarketSignals';
 import { AlertsPage } from './components/alerts/AlertsPage';
 import { InvestmentCalendar } from './components/calendar/InvestmentCalendar';
+import { InvestmentTerminal } from './components/terminal/InvestmentTerminal';
+import { StockResearch } from './components/stocks/StockResearch';
+import { DataRoom } from './components/dataroom/DataRoom';
+import { AskPredicta } from './components/ai/AskPredicta';
 import { Loader2 } from 'lucide-react';
 
 function AppContent() {
@@ -107,9 +111,9 @@ function AppContent() {
     return <VerifyEmailPage onNavigate={handleNavigate} />;
   }
 
-  // If authenticated and on landing/auth page, redirect to dashboard
+  // If authenticated and on landing/auth page, redirect to terminal
   if (user && (currentPage === 'landing' || currentPage === 'auth')) {
-    setCurrentPage('dashboard');
+    setCurrentPage('terminal');
   }
 
   const renderPage = () => {
@@ -121,15 +125,22 @@ function AppContent() {
           initialMode={new URLSearchParams(window.location.search).get('mode') === 'signup' ? 'signup' : 'signin'} 
           onNavigate={handleNavigate}
         />;
+      case 'terminal':
+        return <InvestmentTerminal onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
       case 'dashboard':
         return <Dashboard onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
       case 'explore':
         return <StockExplorer onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
       case 'analysis':
+      case 'research':
         if (selectedStock) {
-          return <StockDetail symbol={selectedStock} onBack={() => handleNavigate('explore')} onNavigate={handleNavigate} />;
+          return <StockResearch symbol={selectedStock} onBack={() => handleNavigate('explore')} onNavigate={handleNavigate} />;
         }
         return <StockExplorer onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
+      case 'dataroom':
+        return <DataRoom onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
+      case 'ask':
+        return <AskPredicta onNavigate={handleNavigate} />;
       case 'forecast':
         return <ForecastWorkspace onNavigate={handleNavigate} />;
       case 'laboratory':
@@ -159,7 +170,7 @@ function AppContent() {
       case 'settings':
         return <SettingsPage />;
       default:
-        return <Dashboard onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
+        return <InvestmentTerminal onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
     }
   };
 

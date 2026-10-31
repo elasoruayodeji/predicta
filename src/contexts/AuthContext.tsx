@@ -95,11 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     if (!isSupabaseConfigured()) return;
     
-    // Clear user-specific data before signing out
-    if (user) {
-      const { clearUserData } = await import('../utils/storage');
-      clearUserData(user.id);
-    }
+    // DO NOT delete user's localStorage data on sign-out
+    // User data should persist across sign-out/sign-in cycles
+    // The AppContext will clear in-memory React state when userId changes
     
     await supabase.auth.signOut();
   };
