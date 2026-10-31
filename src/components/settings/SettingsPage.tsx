@@ -3,6 +3,7 @@
 // ============================================================
 import React, { useState, useEffect } from 'react';
 import { useAppState } from '../../store/AppContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Button } from '../common';
 import { checkInvestoHealth } from '../../services/investoClient';
 import { 
@@ -16,6 +17,7 @@ type SettingsTab = 'profile' | 'preferences' | 'appearance' | 'notifications' | 
 
 export function SettingsPage() {
   const { state, dispatch } = useAppState();
+  const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [investoStatus, setInvestoStatus] = useState<'checking' | 'configured' | 'not_configured' | 'error'>('checking');
@@ -295,11 +297,11 @@ export function SettingsPage() {
                   <div className="grid grid-cols-3 gap-3">
                     <button
                       onClick={() => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { theme: 'dark' } });
+                        setTheme('dark');
                         handleSave();
                       }}
                       className={`p-4 rounded-lg border-2 transition-all ${
-                        state.settings.theme === 'dark'
+                        theme === 'dark'
                           ? 'border-[var(--color-accent-blue)] bg-[var(--color-accent-blue-glow)]'
                           : 'border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)] hover:border-[var(--color-border-secondary)]'
                       }`}
@@ -309,11 +311,11 @@ export function SettingsPage() {
                     </button>
                     <button
                       onClick={() => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { theme: 'light' } });
+                        setTheme('light');
                         handleSave();
                       }}
                       className={`p-4 rounded-lg border-2 transition-all ${
-                        state.settings.theme === 'light'
+                        theme === 'light'
                           ? 'border-[var(--color-accent-blue)] bg-[var(--color-accent-blue-glow)]'
                           : 'border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)] hover:border-[var(--color-border-secondary)]'
                       }`}
@@ -323,11 +325,11 @@ export function SettingsPage() {
                     </button>
                     <button
                       onClick={() => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { theme: 'system' } });
+                        setTheme('system');
                         handleSave();
                       }}
                       className={`p-4 rounded-lg border-2 transition-all ${
-                        state.settings.theme === 'system'
+                        theme === 'system'
                           ? 'border-[var(--color-accent-blue)] bg-[var(--color-accent-blue-glow)]'
                           : 'border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)] hover:border-[var(--color-border-secondary)]'
                       }`}
