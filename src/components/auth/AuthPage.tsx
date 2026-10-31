@@ -94,18 +94,11 @@ export function AuthPage({ initialMode = 'signin', onNavigate }: AuthPageProps) 
         <div className="max-w-md w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-8">
           <div className="flex items-center gap-3 mb-6">
             <AlertCircle size={24} className="text-[var(--color-warning)]" />
-            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Supabase Not Configured</h2>
+            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Service Temporarily Unavailable</h2>
           </div>
           <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-            Cloud features require Supabase configuration. The application will work in offline mode with localStorage.
+            Account features are currently unavailable. The application will work in offline mode.
           </p>
-          <div className="bg-[var(--color-bg-tertiary)] rounded-lg p-4 mb-4">
-            <p className="text-xs text-[var(--color-text-muted)] mb-2">Required environment variables:</p>
-            <code className="text-xs text-[var(--color-text-primary)] block">
-              VITE_SUPABASE_URL=your-project-url<br />
-              VITE_SUPABASE_ANON_KEY=your-anon-key
-            </code>
-          </div>
           <p className="text-xs text-[var(--color-text-muted)]">
             See CLOUD_SETUP_GUIDE.md for setup instructions.
           </p>

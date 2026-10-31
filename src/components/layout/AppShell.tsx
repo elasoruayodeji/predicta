@@ -130,17 +130,17 @@ export function AppShell({ children, currentPage, onNavigate }: AppShellProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Cloud connection status */}
+            {/* Sync status */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)]">
               {isConfigured ? (
                 <>
                   <Cloud size={14} className="text-[var(--color-positive)]" />
-                  <span className="text-xs text-[var(--color-text-secondary)]">Cloud Sync</span>
+                  <span className="text-xs text-[var(--color-text-secondary)]">Synced</span>
                 </>
               ) : (
                 <>
                   <CloudOff size={14} className="text-[var(--color-warning)]" />
-                  <span className="text-xs text-[var(--color-text-secondary)]">Local Only</span>
+                  <span className="text-xs text-[var(--color-text-secondary)]">Offline</span>
                 </>
               )}
             </div>

@@ -3,6 +3,7 @@
 // ============================================================
 import React, { useMemo } from 'react';
 import { useAppState } from '../../store/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { MetricCard, EmptyState, StatusBadge } from '../common';
 import { InvestoConnectionStatus } from '../common/InvestoConnectionStatus';
 import { MarketMovers } from './MarketMovers';
@@ -22,12 +23,16 @@ interface DashboardProps {
 
 export function Dashboard({ onNavigate, onSelectStock }: DashboardProps) {
   const { state } = useAppState();
+  const { user } = useAuth();
   const datasets = Array.from(state.datasets.values());
   const userName = state.settings.userName || 'Investor';
 
   // Calculate portfolio metrics if transactions exist
   const portfolioData = useMemo(() => {
-    const transactions = JSON.parse(localStorage.getItem('predicta_portfolio_transactions') || '[]');
+    // Load transactions from user-scoped storage
+    const userId = user?.id;
+    const storageKey = userId ? `predicta_portfolio_transactions_${userId}` : 'predicta_portfolio_transactions';
+    const transactions = JSON.parse(localStorage.getItem(storageKey) || '[]');
     if (transactions.length === 0) return null;
 
     // Calculate total portfolio value from holdings
@@ -82,7 +87,7 @@ export function Dashboard({ onNavigate, onSelectStock }: DashboardProps) {
       holdings: holdings.sort((a, b) => b.weight - a.weight),
       holdingsCount: holdings.length,
     };
-  }, [datasets]);
+  }, [datasets, user]);
 
   // Get market indices (simulated - in real app would come from API)
   const marketIndices = useMemo(() => {

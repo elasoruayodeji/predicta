@@ -1,8 +1,9 @@
 // ============================================================
 // Investment Journal Component
 // ============================================================
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppState } from '../../store/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   JournalEntry, 
   createJournalEntry, 
@@ -24,19 +25,27 @@ interface InvestmentJournalProps {
 
 export function InvestmentJournal({ onNavigate }: InvestmentJournalProps) {
   const { state } = useAppState();
-  const [entries, setEntries] = useState<JournalEntry[]>(() => {
-    const saved = localStorage.getItem('predicta_investment_journal');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const { user } = useAuth();
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterType, setFilterType] = useState<string>('all');
   const [filterSymbol, setFilterSymbol] = useState<string>('');
   const [sortBy, setSortBy] = useState<'date' | 'symbol' | 'type' | 'return'>('date');
 
-  // Save entries to localStorage
+  // Load entries from user-scoped storage
+  useEffect(() => {
+    const userId = user?.id;
+    const storageKey = userId ? `predicta_investment_journal_${userId}` : 'predicta_investment_journal';
+    const saved = localStorage.getItem(storageKey);
+    setEntries(saved ? JSON.parse(saved) : []);
+  }, [user]);
+
+  // Save entries to user-scoped localStorage
   const saveEntries = (newEntries: JournalEntry[]) => {
     setEntries(newEntries);
-    localStorage.setItem('predicta_investment_journal', JSON.stringify(newEntries));
+    const userId = user?.id;
+    const storageKey = userId ? `predicta_investment_journal_${userId}` : 'predicta_investment_journal';
+    localStorage.setItem(storageKey, JSON.stringify(newEntries));
   };
 
   // Calculate stats
