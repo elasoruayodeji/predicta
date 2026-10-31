@@ -83,10 +83,10 @@ export function VerifyEmailPage({ onNavigate }: VerifyEmailPageProps) {
         <div className="max-w-md w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-8">
           <div className="flex items-center gap-3 mb-6">
             <AlertCircle size={24} className="text-[var(--color-warning)]" />
-            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Supabase Not Configured</h2>
+            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Service Not Available</h2>
           </div>
           <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-            Email verification requires Supabase configuration.
+            Email verification is currently unavailable. Please try again later.
           </p>
           <Button variant="secondary" onClick={() => onNavigate('landing')}>
             <ArrowLeft size={16} className="mr-2" />

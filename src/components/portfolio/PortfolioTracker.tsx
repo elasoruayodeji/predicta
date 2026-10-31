@@ -62,7 +62,8 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
               setCloudAccountId(newAccount.id);
               
               // Migrate localStorage data to cloud if exists
-              const saved = localStorage.getItem('predicta_portfolio_transactions');
+              const localKey = user?.id ? `predicta_portfolio_transactions_${user.id}` : 'predicta_portfolio_transactions';
+              const saved = localStorage.getItem(localKey);
               if (saved) {
                 const localTransactions = JSON.parse(saved);
                 if (localTransactions.length > 0) {
@@ -108,8 +109,9 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
           console.error('Failed to load portfolio from cloud:', error);
         }
       } else {
-        // Load from localStorage
-        const saved = localStorage.getItem('predicta_portfolio_transactions');
+        // Load from user-scoped localStorage
+        const storageKey = user?.id ? `predicta_portfolio_transactions_${user.id}` : 'predicta_portfolio_transactions';
+        const saved = localStorage.getItem(storageKey);
         if (saved) {
           setTransactions(JSON.parse(saved));
         }
@@ -124,8 +126,9 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
   const saveTransactions = async (newTransactions: Transaction[], oldTransactions?: Transaction[]) => {
     setTransactions(newTransactions);
     
-    // Always save to localStorage as backup
-    localStorage.setItem('predicta_portfolio_transactions', JSON.stringify(newTransactions));
+    // Always save to user-scoped localStorage as backup
+    const storageKey = user?.id ? `predicta_portfolio_transactions_${user.id}` : 'predicta_portfolio_transactions';
+    localStorage.setItem(storageKey, JSON.stringify(newTransactions));
     
     // Sync to cloud if authenticated
     if (user && isConfigured && cloudAccountId) {
@@ -225,7 +228,8 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
     // Delete from local state
     const updatedTransactions = transactions.filter(t => t.id !== id);
     setTransactions(updatedTransactions);
-    localStorage.setItem('predicta_portfolio_transactions', JSON.stringify(updatedTransactions));
+    const storageKey = user?.id ? `predicta_portfolio_transactions_${user.id}` : 'predicta_portfolio_transactions';
+    localStorage.setItem(storageKey, JSON.stringify(updatedTransactions));
   };
 
   // Handle export

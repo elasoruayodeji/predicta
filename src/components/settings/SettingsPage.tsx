@@ -350,11 +350,11 @@ export function SettingsPage() {
                       <AlertCircle size={16} className="text-[var(--color-accent-blue)] mt-0.5" />
                       <div className="text-xs text-[var(--color-text-secondary)]">
                         <p className="font-semibold text-[var(--color-text-primary)] mb-1">
-                          {user && isAuthConfigured ? 'Cloud Storage' : 'Local Storage'}
+                          {user && isAuthConfigured ? 'Synced Across Devices' : 'Local Storage'}
                         </p>
                         <p>
                           {user && isAuthConfigured
-                            ? 'Your profile information is securely stored in the cloud database and synced across all your devices.'
+                            ? 'Your profile information is securely stored and synced across all your devices.'
                             : 'Your profile information is stored locally in your browser. Sign in to sync across devices.'}
                         </p>
                       </div>
