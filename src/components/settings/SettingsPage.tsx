@@ -3,9 +3,11 @@
 // ============================================================
 import React, { useState, useEffect } from 'react';
 import { useAppState } from '../../store/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Button } from '../common';
 import { checkInvestoHealth } from '../../services/investoClient';
+import { getUserSettings, updateUserSettings, getProfile, updateProfile } from '../../services/dataService';
 import { 
   User, Shield, Palette, Bell, Database, Globe, Download, Trash2,
   Save, CheckCircle, XCircle, Loader2, AlertCircle, Eye, EyeOff,
@@ -17,10 +19,73 @@ type SettingsTab = 'profile' | 'preferences' | 'appearance' | 'notifications' | 
 
 export function SettingsPage() {
   const { state, dispatch } = useAppState();
+  const { user, isConfigured: isAuthConfigured } = useAuth();
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [investoStatus, setInvestoStatus] = useState<'checking' | 'configured' | 'not_configured' | 'error'>('checking');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load cloud data when user is authenticated
+  useEffect(() => {
+    const loadCloudData = async () => {
+      if (!user || !isAuthConfigured) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Load profile
+        const profile = await getProfile(user.id);
+        if (profile) {
+          dispatch({
+            type: 'UPDATE_SETTINGS',
+            payload: {
+              userName: profile.full_name || '',
+              userEmail: profile.email || '',
+            }
+          });
+        }
+
+        // Load settings
+        const settings = await getUserSettings(user.id);
+        if (settings) {
+          dispatch({
+            type: 'UPDATE_SETTINGS',
+            payload: {
+              currency: settings.currency || 'NGN',
+              dateFormat: settings.date_format || 'YYYY-MM-DD',
+              timeFormat: settings.time_format || '24h',
+              timezone: settings.timezone || 'Africa/Lagos',
+              numberFormat: settings.number_format || 'standard',
+              defaultHorizon: settings.default_horizon || 5,
+              riskTolerance: settings.risk_tolerance || 'moderate',
+              theme: settings.theme || 'dark',
+              compactMode: settings.compact_mode || false,
+              defaultMarket: settings.default_market || 'NGX',
+              preferredIndices: settings.preferred_indices || ['ASI', 'NGX-30'],
+              preferredSectors: settings.preferred_sectors || [],
+              enablePriceAlerts: settings.enable_price_alerts ?? true,
+              enableMarketUpdates: settings.enable_market_updates ?? true,
+              enableDividendNotifications: settings.enable_dividend_notifications ?? true,
+              enableAnnouncementNotifications: settings.enable_announcement_notifications ?? true,
+              enableResearchNotifications: settings.enable_research_notifications ?? true,
+              shareAnonymousData: settings.share_anonymous_data ?? false,
+              enableAnalytics: settings.enable_analytics ?? false,
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load cloud data:', error);
+        setErrorMessage('Failed to load settings from cloud');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCloudData();
+  }, [user, isAuthConfigured, dispatch]);
 
   // Check Investo status
   useEffect(() => {
@@ -35,16 +100,88 @@ export function SettingsPage() {
     }).catch(() => setInvestoStatus('error'));
   }, []);
 
-  // Auto-save indicator
+  // Auto-clear status messages
   useEffect(() => {
-    if (saveStatus === 'saved') {
-      const timer = setTimeout(() => setSaveStatus('idle'), 2000);
+    if (saveStatus === 'saved' || saveStatus === 'error') {
+      const timer = setTimeout(() => {
+        setSaveStatus('idle');
+        setErrorMessage('');
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [saveStatus]);
 
-  const handleSave = () => {
-    setSaveStatus('saved');
+  // Save profile to Supabase
+  const handleSaveProfile = async (updates: { userName?: string; userEmail?: string }) => {
+    if (!user || !isAuthConfigured) {
+      // Fallback to localStorage for unauthenticated users
+      dispatch({ type: 'UPDATE_SETTINGS', payload: updates });
+      setSaveStatus('saved');
+      return;
+    }
+
+    setSaveStatus('saving');
+    setErrorMessage('');
+
+    try {
+      const profileUpdates: any = {};
+      if (updates.userName !== undefined) profileUpdates.full_name = updates.userName;
+      if (updates.userEmail !== undefined) profileUpdates.email = updates.userEmail;
+
+      await updateProfile(user.id, profileUpdates);
+      dispatch({ type: 'UPDATE_SETTINGS', payload: updates });
+      setSaveStatus('saved');
+    } catch (error: any) {
+      console.error('Failed to save profile:', error);
+      setSaveStatus('error');
+      setErrorMessage(error.message || 'Failed to save profile to cloud');
+    }
+  };
+
+  // Save settings to Supabase
+  const handleSaveSettings = async (updates: any) => {
+    if (!user || !isAuthConfigured) {
+      // Fallback to localStorage for unauthenticated users
+      dispatch({ type: 'UPDATE_SETTINGS', payload: updates });
+      setSaveStatus('saved');
+      return;
+    }
+
+    setSaveStatus('saving');
+    setErrorMessage('');
+
+    try {
+      // Map frontend keys to database keys
+      const dbUpdates: any = {};
+      
+      if (updates.currency !== undefined) dbUpdates.currency = updates.currency;
+      if (updates.dateFormat !== undefined) dbUpdates.date_format = updates.dateFormat;
+      if (updates.timeFormat !== undefined) dbUpdates.time_format = updates.timeFormat;
+      if (updates.timezone !== undefined) dbUpdates.timezone = updates.timezone;
+      if (updates.numberFormat !== undefined) dbUpdates.number_format = updates.numberFormat;
+      if (updates.defaultHorizon !== undefined) dbUpdates.default_horizon = updates.defaultHorizon;
+      if (updates.riskTolerance !== undefined) dbUpdates.risk_tolerance = updates.riskTolerance;
+      if (updates.theme !== undefined) dbUpdates.theme = updates.theme;
+      if (updates.compactMode !== undefined) dbUpdates.compact_mode = updates.compactMode;
+      if (updates.defaultMarket !== undefined) dbUpdates.default_market = updates.defaultMarket;
+      if (updates.preferredIndices !== undefined) dbUpdates.preferred_indices = updates.preferredIndices;
+      if (updates.preferredSectors !== undefined) dbUpdates.preferred_sectors = updates.preferredSectors;
+      if (updates.enablePriceAlerts !== undefined) dbUpdates.enable_price_alerts = updates.enablePriceAlerts;
+      if (updates.enableMarketUpdates !== undefined) dbUpdates.enable_market_updates = updates.enableMarketUpdates;
+      if (updates.enableDividendNotifications !== undefined) dbUpdates.enable_dividend_notifications = updates.enableDividendNotifications;
+      if (updates.enableAnnouncementNotifications !== undefined) dbUpdates.enable_announcement_notifications = updates.enableAnnouncementNotifications;
+      if (updates.enableResearchNotifications !== undefined) dbUpdates.enable_research_notifications = updates.enableResearchNotifications;
+      if (updates.shareAnonymousData !== undefined) dbUpdates.share_anonymous_data = updates.shareAnonymousData;
+      if (updates.enableAnalytics !== undefined) dbUpdates.enable_analytics = updates.enableAnalytics;
+
+      await updateUserSettings(user.id, dbUpdates);
+      dispatch({ type: 'UPDATE_SETTINGS', payload: updates });
+      setSaveStatus('saved');
+    } catch (error: any) {
+      console.error('Failed to save settings:', error);
+      setSaveStatus('error');
+      setErrorMessage(error.message || 'Failed to save settings to cloud');
+    }
   };
 
   const handleExportData = () => {
@@ -128,8 +265,7 @@ export function SettingsPage() {
                       type="text"
                       value={state.settings.userName || ''}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { userName: e.target.value } });
-                        handleSave();
+                        handleSaveProfile({ userName: e.target.value });
                       }}
                       placeholder="Enter your name"
                       className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-blue)]/50"
@@ -142,8 +278,7 @@ export function SettingsPage() {
                       type="email"
                       value={state.settings.userEmail || ''}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { userEmail: e.target.value } });
-                        handleSave();
+                        handleSaveProfile({ userEmail: e.target.value });
                       }}
                       placeholder="your@email.com"
                       className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-blue)]/50"
@@ -154,8 +289,14 @@ export function SettingsPage() {
                     <div className="flex items-start gap-3">
                       <AlertCircle size={16} className="text-[var(--color-accent-blue)] mt-0.5" />
                       <div className="text-xs text-[var(--color-text-secondary)]">
-                        <p className="font-semibold text-[var(--color-text-primary)] mb-1">Local Storage Only</p>
-                        <p>Your profile information is stored locally in your browser. PREDICTA does not use cloud accounts or send your data to external servers.</p>
+                        <p className="font-semibold text-[var(--color-text-primary)] mb-1">
+                          {user && isAuthConfigured ? 'Cloud Storage' : 'Local Storage'}
+                        </p>
+                        <p>
+                          {user && isAuthConfigured
+                            ? 'Your profile information is securely stored in the cloud database and synced across all your devices.'
+                            : 'Your profile information is stored locally in your browser. Sign in to sync across devices.'}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -179,8 +320,7 @@ export function SettingsPage() {
                     <select
                       value={state.settings.currency}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { currency: e.target.value } });
-                        handleSave();
+                        handleSaveSettings({ currency: e.target.value });
                       }}
                       className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-blue)]/50"
                     >
@@ -198,8 +338,7 @@ export function SettingsPage() {
                     <select
                       value={state.settings.dateFormat}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { dateFormat: e.target.value } });
-                        handleSave();
+                        handleSaveSettings({ dateFormat: e.target.value });
                       }}
                       className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-blue)]/50"
                     >
@@ -216,8 +355,7 @@ export function SettingsPage() {
                     <select
                       value={state.settings.timeFormat}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { timeFormat: e.target.value as '12h' | '24h' } });
-                        handleSave();
+                        handleSaveSettings({ timeFormat: e.target.value as '12h' | '24h' });
                       }}
                       className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-blue)]/50"
                     >
@@ -233,8 +371,7 @@ export function SettingsPage() {
                     <select
                       value={state.settings.timezone}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { timezone: e.target.value } });
-                        handleSave();
+                        handleSaveSettings({ timezone: e.target.value });
                       }}
                       className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-blue)]/50"
                     >
@@ -252,8 +389,7 @@ export function SettingsPage() {
                     <select
                       value={state.settings.numberFormat}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { numberFormat: e.target.value as 'standard' | 'compact' } });
-                        handleSave();
+                        handleSaveSettings({ numberFormat: e.target.value as 'standard' | 'compact' });
                       }}
                       className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-blue)]/50"
                     >
@@ -269,8 +405,7 @@ export function SettingsPage() {
                     <select
                       value={state.settings.defaultHorizon}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { defaultHorizon: Number(e.target.value) } });
-                        handleSave();
+                        handleSaveSettings({ defaultHorizon: Number(e.target.value) });
                       }}
                       className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-blue)]/50"
                     >
@@ -298,7 +433,7 @@ export function SettingsPage() {
                     <button
                       onClick={() => {
                         setTheme('dark');
-                        handleSave();
+                        handleSaveSettings({ theme: 'dark' });
                       }}
                       className={`p-4 rounded-lg border-2 transition-all ${
                         theme === 'dark'
@@ -312,7 +447,7 @@ export function SettingsPage() {
                     <button
                       onClick={() => {
                         setTheme('light');
-                        handleSave();
+                        handleSaveSettings({ theme: 'light' });
                       }}
                       className={`p-4 rounded-lg border-2 transition-all ${
                         theme === 'light'
@@ -326,7 +461,7 @@ export function SettingsPage() {
                     <button
                       onClick={() => {
                         setTheme('system');
-                        handleSave();
+                        handleSaveSettings({ theme: 'system' });
                       }}
                       className={`p-4 rounded-lg border-2 transition-all ${
                         theme === 'system'
@@ -346,8 +481,7 @@ export function SettingsPage() {
                       type="checkbox"
                       checked={state.settings.compactMode}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { compactMode: e.target.checked } });
-                        handleSave();
+                        handleSaveSettings({ compactMode: e.target.checked });
                       }}
                       className="w-4 h-4 rounded border-[var(--color-border-primary)] bg-[var(--color-bg-tertiary)] text-[var(--color-accent-blue)] focus:ring-[var(--color-accent-blue)] focus:ring-2"
                     />
@@ -381,8 +515,7 @@ export function SettingsPage() {
                       type="checkbox"
                       checked={state.settings.enablePriceAlerts}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { enablePriceAlerts: e.target.checked } });
-                        handleSave();
+                        handleSaveSettings({ enablePriceAlerts: e.target.checked });
                       }}
                       className="w-4 h-4 rounded border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-accent-blue)] focus:ring-[var(--color-accent-blue)] focus:ring-2"
                     />
@@ -400,8 +533,7 @@ export function SettingsPage() {
                       type="checkbox"
                       checked={state.settings.enableMarketUpdates}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { enableMarketUpdates: e.target.checked } });
-                        handleSave();
+                        handleSaveSettings({ enableMarketUpdates: e.target.checked });
                       }}
                       className="w-4 h-4 rounded border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-accent-blue)] focus:ring-[var(--color-accent-blue)] focus:ring-2"
                     />
@@ -419,8 +551,7 @@ export function SettingsPage() {
                       type="checkbox"
                       checked={state.settings.enableDividendNotifications}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { enableDividendNotifications: e.target.checked } });
-                        handleSave();
+                        handleSaveSettings({ enableDividendNotifications: e.target.checked });
                       }}
                       className="w-4 h-4 rounded border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-accent-blue)] focus:ring-[var(--color-accent-blue)] focus:ring-2"
                     />
@@ -438,8 +569,7 @@ export function SettingsPage() {
                       type="checkbox"
                       checked={state.settings.enableAnnouncementNotifications}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { enableAnnouncementNotifications: e.target.checked } });
-                        handleSave();
+                        handleSaveSettings({ enableAnnouncementNotifications: e.target.checked });
                       }}
                       className="w-4 h-4 rounded border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-accent-blue)] focus:ring-[var(--color-accent-blue)] focus:ring-2"
                     />
@@ -457,8 +587,7 @@ export function SettingsPage() {
                       type="checkbox"
                       checked={state.settings.enableResearchNotifications}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { enableResearchNotifications: e.target.checked } });
-                        handleSave();
+                        handleSaveSettings({ enableResearchNotifications: e.target.checked });
                       }}
                       className="w-4 h-4 rounded border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-accent-blue)] focus:ring-[var(--color-accent-blue)] focus:ring-2"
                     />
@@ -559,8 +688,7 @@ export function SettingsPage() {
                       type="checkbox"
                       checked={state.settings.shareAnonymousData}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { shareAnonymousData: e.target.checked } });
-                        handleSave();
+                        handleSaveSettings({ shareAnonymousData: e.target.checked });
                       }}
                       className="w-4 h-4 rounded border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-accent-blue)] focus:ring-[var(--color-accent-blue)] focus:ring-2"
                     />
@@ -575,8 +703,7 @@ export function SettingsPage() {
                       type="checkbox"
                       checked={state.settings.enableAnalytics}
                       onChange={(e) => {
-                        dispatch({ type: 'UPDATE_SETTINGS', payload: { enableAnalytics: e.target.checked } });
-                        handleSave();
+                        handleSaveSettings({ enableAnalytics: e.target.checked });
                       }}
                       className="w-4 h-4 rounded border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] text-[var(--color-accent-blue)] focus:ring-[var(--color-accent-blue)] focus:ring-2"
                     />
@@ -663,10 +790,24 @@ export function SettingsPage() {
             )}
 
             {/* Save Status Indicator */}
+            {saveStatus === 'saving' && (
+              <div className="fixed bottom-6 right-6 bg-[var(--color-accent-blue)] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                <Loader2 size={16} className="animate-spin" />
+                <span className="text-sm font-medium">Saving to cloud...</span>
+              </div>
+            )}
             {saveStatus === 'saved' && (
               <div className="fixed bottom-6 right-6 bg-[var(--color-positive)] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
                 <CheckCircle size={16} />
-                <span className="text-sm font-medium">Settings saved</span>
+                <span className="text-sm font-medium">
+                  {user && isAuthConfigured ? 'Saved to cloud' : 'Saved locally'}
+                </span>
+              </div>
+            )}
+            {saveStatus === 'error' && errorMessage && (
+              <div className="fixed bottom-6 right-6 bg-[var(--color-negative)] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+                <XCircle size={16} />
+                <span className="text-sm font-medium">{errorMessage}</span>
               </div>
             )}
           </div>
