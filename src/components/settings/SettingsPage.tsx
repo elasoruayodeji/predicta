@@ -26,6 +26,20 @@ export function SettingsPage() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [investoStatus, setInvestoStatus] = useState<'checking' | 'configured' | 'not_configured' | 'error'>('checking');
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Local form state for profile (to avoid saving on every keystroke)
+  const [profileForm, setProfileForm] = useState({
+    userName: state.settings.userName || '',
+    userEmail: state.settings.userEmail || '',
+  });
+  
+  // Update form state when settings change
+  useEffect(() => {
+    setProfileForm({
+      userName: state.settings.userName || '',
+      userEmail: state.settings.userEmail || '',
+    });
+  }, [state.settings.userName, state.settings.userEmail]);
 
   // Load cloud data when user is authenticated
   useEffect(() => {
@@ -263,9 +277,9 @@ export function SettingsPage() {
                     <label className="text-xs text-[var(--color-text-muted)] block mb-1.5">Full Name</label>
                     <input
                       type="text"
-                      value={state.settings.userName || ''}
+                      value={profileForm.userName}
                       onChange={(e) => {
-                        handleSaveProfile({ userName: e.target.value });
+                        setProfileForm({ ...profileForm, userName: e.target.value });
                       }}
                       placeholder="Enter your name"
                       className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-blue)]/50"
@@ -276,13 +290,35 @@ export function SettingsPage() {
                     <label className="text-xs text-[var(--color-text-muted)] block mb-1.5">Email Address</label>
                     <input
                       type="email"
-                      value={state.settings.userEmail || ''}
+                      value={profileForm.userEmail}
                       onChange={(e) => {
-                        handleSaveProfile({ userEmail: e.target.value });
+                        setProfileForm({ ...profileForm, userEmail: e.target.value });
                       }}
                       placeholder="your@email.com"
-                      className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-blue)]/50"
+                      disabled
+                      className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-muted)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-blue)]/50 opacity-60 cursor-not-allowed"
                     />
+                    <p className="text-[10px] text-[var(--color-text-muted)] mt-1">Email cannot be changed here</p>
+                  </div>
+                  
+                  <div className="pt-2">
+                    <Button
+                      variant="primary"
+                      onClick={() => handleSaveProfile({ userName: profileForm.userName })}
+                      disabled={saveStatus === 'saving' || profileForm.userName === state.settings.userName}
+                    >
+                      {saveStatus === 'saving' ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save size={14} />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
                   </div>
 
                   <div className="p-4 bg-[var(--color-bg-tertiary)] rounded-lg border border-[var(--color-border-primary)]">

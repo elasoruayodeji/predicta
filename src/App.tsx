@@ -3,9 +3,10 @@
 // ============================================================
 import React, { useState } from 'react';
 import { AppProvider, useAppState } from './store/AppContext';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AppShell } from './components/layout/AppShell';
+import { AuthPage } from './components/auth/AuthPage';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { StockExplorer } from './components/stocks/StockExplorer';
 import { StockDetail } from './components/stocks/StockDetail';
@@ -23,11 +24,30 @@ import { InvestmentJournal } from './components/journal/InvestmentJournal';
 import { MarketSignals } from './components/signals/MarketSignals';
 import { AlertsPage } from './components/alerts/AlertsPage';
 import { InvestmentCalendar } from './components/calendar/InvestmentCalendar';
+import { Loader2 } from 'lucide-react';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
   const { dispatch } = useAppState();
+  const { user, loading, isConfigured } = useAuth();
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-primary)]">
+        <div className="flex items-center gap-3">
+          <Loader2 size={24} className="animate-spin text-[var(--color-accent-blue)]" />
+          <span className="text-sm text-[var(--color-text-secondary)]">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth page if not authenticated (but only if Supabase is configured)
+  if (!user && isConfigured) {
+    return <AuthPage />;
+  }
 
   const handleSelectStock = (symbol: string) => {
     setSelectedStock(symbol);
