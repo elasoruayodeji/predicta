@@ -6,7 +6,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { 
   LayoutDashboard, Search, LineChart, FlaskConical, AlertTriangle, 
   FileText, Star, Settings, Menu, X, ChevronRight, Database, TrendingUp, Filter,
-  PieChart, Calculator, BookOpen, Zap, Bell, Calendar, LogOut, User, Cloud, CloudOff
+  PieChart, Calculator, BookOpen, Zap, Bell, Calendar, LogOut, User, Cloud, CloudOff,
+  Sparkles
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -16,21 +17,23 @@ interface AppShellProps {
 }
 
 const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'signals', label: 'Market Signals', icon: Zap },
+  { id: 'terminal', label: 'Terminal', icon: LayoutDashboard },
+  { id: 'explore', label: 'Markets', icon: Search },
+  { id: 'screener', label: 'Screener', icon: Filter },
+  { id: 'signals', label: 'Signals', icon: Zap },
+  { id: 'research', label: 'Stock Research', icon: LineChart },
+  { id: 'dataroom', label: 'Data Room', icon: FileText },
+  { id: 'ask', label: 'Ask PREDICTA', icon: Sparkles },
+  { id: 'watchlist', label: 'Watchlists', icon: Star },
+  { id: 'portfolio', label: 'Portfolio', icon: PieChart },
   { id: 'alerts', label: 'Alerts', icon: Bell },
+  { id: 'journal', label: 'Journal', icon: BookOpen },
   { id: 'calendar', label: 'Calendar', icon: Calendar },
-  { id: 'screener', label: 'Stock Screener', icon: Filter },
-  { id: 'explore', label: 'Stock Explorer', icon: Search },
-  { id: 'analysis', label: 'Analysis', icon: LineChart },
+  { id: 'valuation', label: 'Valuation', icon: Calculator },
   { id: 'forecast', label: 'Forecasting', icon: TrendingUp },
   { id: 'laboratory', label: 'Model Lab', icon: FlaskConical },
   { id: 'anomalies', label: 'Anomalies', icon: AlertTriangle },
-  { id: 'portfolio', label: 'Portfolio', icon: PieChart },
-  { id: 'valuation', label: 'Valuation', icon: Calculator },
-  { id: 'journal', label: 'Journal', icon: BookOpen },
   { id: 'reports', label: 'Reports', icon: FileText },
-  { id: 'watchlist', label: 'Watchlist', icon: Star },
   { id: 'data', label: 'Data Import', icon: Database },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
