@@ -3,6 +3,8 @@
 // ============================================================
 import React, { useState, useEffect } from 'react';
 import { useAppState, useAllDatasets } from '../../store/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { getAlerts, createAlert as createCloudAlert, updateAlert, deleteAlert as deleteCloudAlert } from '../../services/dataService';
 import { 
   Alert, 
   AlertType, 
@@ -32,15 +34,61 @@ interface AlertsPageProps {
 
 export function AlertsPage({ onNavigate, onSelectStock }: AlertsPageProps) {
   const { state } = useAppState();
+  const { user, isConfigured } = useAuth();
   const datasets = useAllDatasets();
-  const [alerts, setAlerts] = useState<Alert[]>(() => loadAlerts());
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'triggered'>('all');
+  const [loading, setLoading] = useState(true);
 
-  // Save alerts whenever they change
+  // Load alerts from cloud or localStorage
   useEffect(() => {
-    saveAlerts(alerts);
-  }, [alerts]);
+    const loadAlertsData = async () => {
+      if (user && isConfigured) {
+        // Load from cloud
+        try {
+          const cloudAlerts = await getAlerts(user.id);
+          // Map cloud alerts to local format
+          const mappedAlerts: Alert[] = cloudAlerts.map((a: any) => ({
+            id: a.id,
+            symbol: a.symbol,
+            type: a.alert_type,
+            condition: {
+              threshold: a.condition_value ? parseFloat(a.condition_value) : undefined,
+              percent: a.condition_percent ? parseFloat(a.condition_percent) : undefined,
+              message: a.condition_message || undefined,
+            },
+            active: a.is_active,
+            triggered: a.is_triggered,
+            triggeredAt: a.triggered_at,
+            createdAt: a.created_at,
+            lastChecked: a.last_checked_at,
+          }));
+          setAlerts(mappedAlerts);
+        } catch (error) {
+          console.error('Failed to load alerts from cloud:', error);
+          // Fallback to localStorage
+          setAlerts(loadAlerts());
+        }
+      } else {
+        // Load from localStorage
+        setAlerts(loadAlerts());
+      }
+      setLoading(false);
+    };
+
+    loadAlertsData();
+  }, [user, isConfigured]);
+
+  // Save alerts to localStorage and/or cloud
+  const saveAlertsData = async (newAlerts: Alert[]) => {
+    setAlerts(newAlerts);
+    
+    // Always save to localStorage as backup
+    saveAlerts(newAlerts);
+    
+    // Note: Cloud sync for alerts is handled in individual create/update/delete functions
+  };
 
   // Summary stats
   const stats = {
@@ -57,28 +105,90 @@ export function AlertsPage({ onNavigate, onSelectStock }: AlertsPageProps) {
   });
 
   // Handle create alert
-  const handleCreateAlert = (symbol: string, type: AlertType, condition: Alert['condition']) => {
+  const handleCreateAlert = async (symbol: string, type: AlertType, condition: Alert['condition']) => {
     const newAlert = createAlert(symbol, type, condition);
+    
+    // Sync to cloud if authenticated
+    if (user && isConfigured) {
+      try {
+        const cloudAlert = await createCloudAlert(user.id, {
+          symbol,
+          alert_type: type,
+          condition_value: condition.threshold,
+          condition_percent: condition.percent,
+          condition_message: condition.message,
+          is_active: true,
+          is_triggered: false,
+        });
+        newAlert.id = cloudAlert.id;
+      } catch (error) {
+        console.error('Failed to create alert in cloud:', error);
+      }
+    }
+    
     setAlerts([newAlert, ...alerts]);
     setShowCreateModal(false);
   };
 
   // Handle delete alert
-  const handleDeleteAlert = (alertId: string) => {
+  const handleDeleteAlert = async (alertId: string) => {
     if (confirm('Are you sure you want to delete this alert?')) {
+      // Delete from cloud if authenticated
+      if (user && isConfigured) {
+        try {
+          await deleteCloudAlert(alertId);
+        } catch (error) {
+          console.error('Failed to delete alert from cloud:', error);
+        }
+      }
+      
       setAlerts(deleteAlert(alerts, alertId));
     }
   };
 
   // Handle toggle alert
-  const handleToggleAlert = (alertId: string) => {
-    setAlerts(toggleAlert(alerts, alertId));
+  const handleToggleAlert = async (alertId: string) => {
+    const updatedAlerts = toggleAlert(alerts, alertId);
+    setAlerts(updatedAlerts);
+    
+    // Sync to cloud if authenticated
+    if (user && isConfigured) {
+      const alert = updatedAlerts.find(a => a.id === alertId);
+      if (alert) {
+        try {
+          await updateAlert(alertId, { is_active: alert.active });
+        } catch (error) {
+          console.error('Failed to update alert in cloud:', error);
+        }
+      }
+    }
   };
 
   // Handle reset alert
-  const handleResetAlert = (alertId: string) => {
-    setAlerts(resetAlert(alerts, alertId));
+  const handleResetAlert = async (alertId: string) => {
+    const updatedAlerts = resetAlert(alerts, alertId);
+    setAlerts(updatedAlerts);
+    
+    // Sync to cloud if authenticated
+    if (user && isConfigured) {
+      try {
+        await updateAlert(alertId, { 
+          is_triggered: false, 
+          triggered_at: null 
+        });
+      } catch (error) {
+        console.error('Failed to reset alert in cloud:', error);
+      }
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="text-[var(--color-text-muted)]">Loading alerts...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -95,6 +205,15 @@ export function AlertsPage({ onNavigate, onSelectStock }: AlertsPageProps) {
           Create Alert
         </Button>
       </div>
+
+      {user && isConfigured && (
+        <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+          <span className="px-2 py-1 rounded bg-[var(--color-positive-dim)] text-[var(--color-positive)]">
+            Cloud Synced
+          </span>
+          <span>Your alerts are synced across devices</span>
+        </div>
+      )}
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
