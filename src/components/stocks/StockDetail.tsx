@@ -4,6 +4,8 @@
 import React, { useState, useMemo } from 'react';
 import { useAppState } from '../../store/AppContext';
 import { useDataset } from '../../store/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { getWatchlists, addWatchlistItem } from '../../services/dataService';
 import { calculateHistoricalStatistics, calculateMovingAverages, calculateDrawdownSeries, calculateRollingVolatility, calculateRSI, calculateMACD } from '../../engine/statistics';
 import { calculateLiquidityMetrics } from '../../engine/liquidity';
 import { MetricCard, Tabs, Button, WarningBanner, Disclaimer, StatusBadge } from '../common';
@@ -21,6 +23,7 @@ interface StockDetailProps {
 
 export function StockDetail({ symbol, onBack, onNavigate }: StockDetailProps) {
   const { state, dispatch } = useAppState();
+  const { user, isConfigured } = useAuth();
   const dataset = useDataset(symbol);
   const [activeTab, setActiveTab] = useState('overview');
   const [timeRange, setTimeRange] = useState<'1Y' | '5Y' | '10Y' | 'ALL'>('ALL');
@@ -89,22 +92,43 @@ export function StockDetail({ symbol, onBack, onNavigate }: StockDetailProps) {
 
   const isInWatchlist = state.watchlist.some(w => w.symbol === symbol);
 
-  const toggleWatchlist = () => {
+  const toggleWatchlist = async () => {
     if (isInWatchlist) {
       dispatch({ type: 'REMOVE_FROM_WATCHLIST', payload: symbol });
     } else {
+      const watchlistItem = {
+        symbol: info.symbol,
+        name: info.name,
+        exchange: info.exchange,
+        addedAt: new Date().toISOString(),
+        lastPrice: prices[prices.length - 1]?.close,
+        lastPriceDate: prices[prices.length - 1]?.date,
+        anomalyCount: state.anomalies.get(symbol)?.length ?? 0,
+      };
+
+      // Add to localStorage state
       dispatch({
         type: 'ADD_TO_WATCHLIST',
-        payload: {
-          symbol: info.symbol,
-          name: info.name,
-          exchange: info.exchange,
-          addedAt: new Date().toISOString(),
-          lastPrice: prices[prices.length - 1]?.close,
-          lastPriceDate: prices[prices.length - 1]?.date,
-          anomalyCount: state.anomalies.get(symbol)?.length ?? 0,
-        },
+        payload: watchlistItem,
       });
+
+      // Sync to cloud if authenticated
+      if (user && isConfigured) {
+        try {
+          const watchlists = await getWatchlists(user.id);
+          if (watchlists.length > 0) {
+            await addWatchlistItem(
+              watchlists[0].id,
+              watchlistItem.symbol,
+              watchlistItem.name,
+              watchlistItem.exchange,
+              ''
+            );
+          }
+        } catch (error) {
+          console.error('Failed to sync watchlist to cloud:', error);
+        }
+      }
     }
   };
 

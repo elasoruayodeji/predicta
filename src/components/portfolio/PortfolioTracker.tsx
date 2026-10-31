@@ -1,8 +1,10 @@
 // ============================================================
 // Portfolio Tracker Component
 // ============================================================
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useAppState } from '../../store/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { getPortfolioAccounts, addTransaction, deleteTransaction } from '../../services/dataService';
 import { 
   Transaction, 
   calculateHoldings, 
@@ -23,19 +25,81 @@ interface PortfolioProps {
 
 export function PortfolioTracker({ onNavigate }: PortfolioProps) {
   const { state, dispatch } = useAppState();
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    // Load from localStorage
-    const saved = localStorage.getItem('predicta_portfolio_transactions');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const { user, isConfigured } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [cloudAccountId, setCloudAccountId] = useState<string | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [loading, setLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Save transactions to localStorage
-  const saveTransactions = (newTransactions: Transaction[]) => {
+  // Load transactions from cloud or localStorage
+  useEffect(() => {
+    const loadTransactions = async () => {
+      if (user && isConfigured) {
+        // Load from cloud
+        try {
+          const accounts = await getPortfolioAccounts(user.id);
+          if (accounts.length > 0) {
+            setCloudAccountId(accounts[0].id);
+            const cloudTransactions = accounts[0].portfolio_transactions || [];
+            // Map cloud transactions to local format
+            const mappedTransactions: Transaction[] = cloudTransactions.map((t: any) => ({
+              id: t.id,
+              symbol: t.symbol,
+              type: t.transaction_type,
+              date: t.transaction_date,
+              quantity: parseFloat(t.quantity),
+              price: parseFloat(t.price_per_share),
+              fees: parseFloat(t.fees) || 0,
+              notes: t.notes || '',
+            }));
+            setTransactions(mappedTransactions);
+          }
+        } catch (error) {
+          console.error('Failed to load portfolio from cloud:', error);
+        }
+      } else {
+        // Load from localStorage
+        const saved = localStorage.getItem('predicta_portfolio_transactions');
+        if (saved) {
+          setTransactions(JSON.parse(saved));
+        }
+      }
+      setLoading(false);
+    };
+
+    loadTransactions();
+  }, [user, isConfigured]);
+
+  // Save transactions to localStorage and/or cloud
+  const saveTransactions = async (newTransactions: Transaction[]) => {
     setTransactions(newTransactions);
+    
+    // Always save to localStorage as backup
     localStorage.setItem('predicta_portfolio_transactions', JSON.stringify(newTransactions));
+    
+    // Sync to cloud if authenticated
+    if (user && isConfigured && cloudAccountId) {
+      try {
+        // For simplicity, we'll just add new transactions
+        // A more sophisticated approach would diff and sync
+        const lastTransaction = newTransactions[newTransactions.length - 1];
+        if (lastTransaction && !lastTransaction.id.startsWith('cloud_')) {
+          await addTransaction(cloudAccountId, {
+            symbol: lastTransaction.symbol,
+            transaction_type: lastTransaction.type,
+            transaction_date: lastTransaction.date,
+            quantity: lastTransaction.quantity,
+            price_per_share: lastTransaction.price,
+            fees: lastTransaction.fees,
+            notes: lastTransaction.notes || '',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to sync transaction to cloud:', error);
+      }
+    }
   };
 
   // Get current prices from datasets
@@ -90,7 +154,17 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
   };
 
   // Handle delete transaction
-  const handleDeleteTransaction = (id: string) => {
+  const handleDeleteTransaction = async (id: string) => {
+    // Delete from cloud if authenticated and it's a cloud transaction
+    if (user && isConfigured && id.startsWith('cloud_')) {
+      try {
+        await deleteTransaction(id);
+      } catch (error) {
+        console.error('Failed to delete transaction from cloud:', error);
+      }
+    }
+    
+    // Delete from local state
     saveTransactions(transactions.filter(t => t.id !== id));
   };
 
@@ -117,8 +191,24 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
     URL.revokeObjectURL(url);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="text-[var(--color-text-muted)]">Loading portfolio...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-7xl">
+      {user && isConfigured && (
+        <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+          <span className="px-2 py-1 rounded bg-[var(--color-positive-dim)] text-[var(--color-positive)]">
+            Cloud Synced
+          </span>
+          <span>Your portfolio is synced across devices</span>
+        </div>
+      )}
       {transactions.length === 0 ? (
         <EmptyState
           icon={<PieChart size={32} />}
