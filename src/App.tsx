@@ -95,15 +95,30 @@ function AppContent() {
     }
   }
 
-  // Show landing page for unauthenticated users
-  if (!user && isConfigured && (currentPage === 'landing' || currentPage === 'auth')) {
+  // Show landing/auth pages WITHOUT AppShell (no sidebar)
+  if (!user && isConfigured) {
     if (currentPage === 'auth') {
       return <AuthPage 
         initialMode={new URLSearchParams(window.location.search).get('mode') === 'signup' ? 'signup' : 'signin'} 
         onNavigate={handleNavigate}
       />;
     }
+    // Default to landing page for unauthenticated users
     return <LandingPage onNavigate={handleNavigate} />;
+  }
+
+  // Handle auth-related routes (these also don't need AppShell)
+  if (currentPage.startsWith('auth/')) {
+    switch (currentPage) {
+      case 'auth/callback':
+        return <AuthCallback onNavigate={handleNavigate} />;
+      case 'auth/verify-email':
+        return <VerifyEmailPage onNavigate={handleNavigate} />;
+      case 'auth/forgot-password':
+        return <ForgotPasswordPage onNavigate={handleNavigate} />;
+      case 'auth/reset-password':
+        return <ResetPasswordPage onNavigate={handleNavigate} />;
+    }
   }
 
   // If authenticated but email not verified, show verification page
@@ -118,13 +133,6 @@ function AppContent() {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'landing':
-        return <LandingPage onNavigate={handleNavigate} />;
-      case 'auth':
-        return <AuthPage 
-          initialMode={new URLSearchParams(window.location.search).get('mode') === 'signup' ? 'signup' : 'signin'} 
-          onNavigate={handleNavigate}
-        />;
       case 'terminal':
         return <InvestmentTerminal onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
       case 'dashboard':
@@ -174,6 +182,7 @@ function AppContent() {
     }
   };
 
+  // Only wrap authenticated pages with AppShell (sidebar navigation)
   return (
     <AppShell currentPage={currentPage} onNavigate={handleNavigate}>
       {renderPage()}

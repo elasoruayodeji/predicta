@@ -848,26 +848,6 @@ export function SettingsPage() {
                 </div>
               </div>
             )}
-
-            {/* Save Status Indicator */}
-            {saveStatus === 'saving' && (
-              <div className="fixed bottom-6 right-6 bg-[var(--color-accent-blue)] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-                <Loader2 size={16} className="animate-spin" />
-                <span className="text-sm font-medium">Saving...</span>
-              </div>
-            )}
-            {saveStatus === 'saved' && (
-              <div className="fixed bottom-6 right-6 bg-[var(--color-positive)] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-                <CheckCircle size={16} />
-                <span className="text-sm font-medium">Changes saved</span>
-              </div>
-            )}
-            {saveStatus === 'error' && errorMessage && (
-              <div className="fixed bottom-6 right-6 bg-[var(--color-negative)] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-                <XCircle size={16} />
-                <span className="text-sm font-medium">{errorMessage}</span>
-              </div>
-            )}
           </div>
         </div>
       </div>
