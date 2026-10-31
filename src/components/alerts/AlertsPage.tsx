@@ -121,13 +121,19 @@ export function AlertsPage({ onNavigate, onSelectStock }: AlertsPageProps) {
           is_triggered: false,
         });
         newAlert.id = cloudAlert.id;
+        // Only update local state after cloud sync succeeds
+        setAlerts([newAlert, ...alerts]);
+        setShowCreateModal(false);
       } catch (error) {
         console.error('Failed to create alert in cloud:', error);
+        window.alert('Failed to create alert. Please try again.');
+        return; // Don't update local state if cloud sync failed
       }
+    } else {
+      // Not authenticated, just update local state
+      setAlerts([newAlert, ...alerts]);
+      setShowCreateModal(false);
     }
-    
-    setAlerts([newAlert, ...alerts]);
-    setShowCreateModal(false);
   };
 
   // Handle delete alert
@@ -137,37 +143,45 @@ export function AlertsPage({ onNavigate, onSelectStock }: AlertsPageProps) {
       if (user && isConfigured) {
         try {
           await deleteCloudAlert(alertId);
+          // Only update local state after cloud delete succeeds
+          setAlerts(deleteAlert(alerts, alertId));
         } catch (error) {
           console.error('Failed to delete alert from cloud:', error);
+          window.alert('Failed to delete alert. Please try again.');
+          return; // Don't update local state if cloud delete failed
         }
+      } else {
+        // Not authenticated, just update local state
+        setAlerts(deleteAlert(alerts, alertId));
       }
-      
-      setAlerts(deleteAlert(alerts, alertId));
     }
   };
 
   // Handle toggle alert
   const handleToggleAlert = async (alertId: string) => {
     const updatedAlerts = toggleAlert(alerts, alertId);
-    setAlerts(updatedAlerts);
+    const alert = updatedAlerts.find(a => a.id === alertId);
     
     // Sync to cloud if authenticated
-    if (user && isConfigured) {
-      const alert = updatedAlerts.find(a => a.id === alertId);
-      if (alert) {
-        try {
-          await updateAlert(alertId, { is_active: alert.active });
-        } catch (error) {
-          console.error('Failed to update alert in cloud:', error);
-        }
+    if (user && isConfigured && alert) {
+      try {
+        await updateAlert(alertId, { is_active: alert.active });
+        // Only update local state after cloud sync succeeds
+        setAlerts(updatedAlerts);
+      } catch (error) {
+        console.error('Failed to update alert in cloud:', error);
+        window.alert('Failed to update alert. Please try again.');
+        return; // Don't update local state if cloud sync failed
       }
+    } else {
+      // Not authenticated, just update local state
+      setAlerts(updatedAlerts);
     }
   };
 
   // Handle reset alert
   const handleResetAlert = async (alertId: string) => {
     const updatedAlerts = resetAlert(alerts, alertId);
-    setAlerts(updatedAlerts);
     
     // Sync to cloud if authenticated
     if (user && isConfigured) {
@@ -176,9 +190,16 @@ export function AlertsPage({ onNavigate, onSelectStock }: AlertsPageProps) {
           is_triggered: false, 
           triggered_at: null 
         });
+        // Only update local state after cloud sync succeeds
+        setAlerts(updatedAlerts);
       } catch (error) {
         console.error('Failed to reset alert in cloud:', error);
+        window.alert('Failed to reset alert. Please try again.');
+        return; // Don't update local state if cloud sync failed
       }
+    } else {
+      // Not authenticated, just update local state
+      setAlerts(updatedAlerts);
     }
   };
 

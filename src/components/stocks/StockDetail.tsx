@@ -5,7 +5,7 @@ import React, { useState, useMemo } from 'react';
 import { useAppState } from '../../store/AppContext';
 import { useDataset } from '../../store/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { getWatchlists, addWatchlistItem } from '../../services/dataService';
+import { getWatchlists, addWatchlistItem, removeWatchlistItem, createWatchlist } from '../../services/dataService';
 import { calculateHistoricalStatistics, calculateMovingAverages, calculateDrawdownSeries, calculateRollingVolatility, calculateRSI, calculateMACD } from '../../engine/statistics';
 import { calculateLiquidityMetrics } from '../../engine/liquidity';
 import { MetricCard, Tabs, Button, WarningBanner, Disclaimer, StatusBadge } from '../common';
@@ -90,12 +90,44 @@ export function StockDetail({ symbol, onBack, onNavigate }: StockDetailProps) {
     }
   }, [prices]);
 
-  const isInWatchlist = state.watchlist.some(w => w.symbol === symbol);
+  // Check if in watchlist (cloud or local)
+  const isInWatchlist = useMemo(() => {
+    if (user && isConfigured) {
+      // For cloud users, we need to check cloud watchlist
+      // This will be updated when cloud watchlist loads
+      return state.watchlist.some(w => w.symbol === symbol);
+    }
+    return state.watchlist.some(w => w.symbol === symbol);
+  }, [state.watchlist, symbol, user, isConfigured]);
 
   const toggleWatchlist = async () => {
     if (isInWatchlist) {
+      // Remove from local state
       dispatch({ type: 'REMOVE_FROM_WATCHLIST', payload: symbol });
+      
+      // Sync to cloud if authenticated
+      if (user && isConfigured) {
+        try {
+          const watchlists = await getWatchlists(user.id);
+          if (watchlists.length > 0) {
+            const watchlistId = watchlists[0].id;
+            const items = watchlists[0].watchlist_items || [];
+            const item = items.find((i: any) => i.symbol === symbol);
+            if (item) {
+              await removeWatchlistItem(item.id);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to remove from cloud watchlist:', error);
+          window.alert('Failed to remove from watchlist. Please try again.');
+        }
+      }
     } else {
+      // Check for duplicates before adding
+      if (state.watchlist.some(w => w.symbol === symbol)) {
+        return; // Already in watchlist
+      }
+
       const watchlistItem = {
         symbol: info.symbol,
         name: info.name,
@@ -116,17 +148,26 @@ export function StockDetail({ symbol, onBack, onNavigate }: StockDetailProps) {
       if (user && isConfigured) {
         try {
           const watchlists = await getWatchlists(user.id);
+          let watchlistId: string;
+          
           if (watchlists.length > 0) {
-            await addWatchlistItem(
-              watchlists[0].id,
-              watchlistItem.symbol,
-              watchlistItem.name,
-              watchlistItem.exchange,
-              ''
-            );
+            watchlistId = watchlists[0].id;
+          } else {
+            // Create default watchlist if none exists
+            const newWatchlist = await createWatchlist(user.id, 'My Watchlist', 'Default watchlist');
+            watchlistId = newWatchlist.id;
           }
+          
+          await addWatchlistItem(
+            watchlistId,
+            watchlistItem.symbol,
+            watchlistItem.name,
+            watchlistItem.exchange,
+            ''
+          );
         } catch (error) {
           console.error('Failed to sync watchlist to cloud:', error);
+          window.alert('Failed to add to watchlist. Please try again.');
         }
       }
     }
