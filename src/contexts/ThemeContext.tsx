@@ -17,8 +17,9 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { user, isConfigured } = useAuth();
-  const [theme, setThemeState] = useState<Theme>('dark');
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
+  // Default to light mode for unauthenticated users (landing page)
+  const [theme, setThemeState] = useState<Theme>(user ? 'dark' : 'light');
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(user ? 'dark' : 'light');
 
   // Load theme from cloud or localStorage
   useEffect(() => {
@@ -33,10 +34,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           console.error('Failed to load theme from cloud:', error);
         }
       } else {
-        // Fallback to localStorage
+        // For unauthenticated users, default to light mode
+        // Check localStorage for authenticated user's preference
         const saved = localStorage.getItem('predicta_theme') as Theme;
-        if (saved) {
+        if (saved && user) {
           setThemeState(saved);
+        } else {
+          // Default to light for landing page
+          setThemeState('light');
         }
       }
     };
