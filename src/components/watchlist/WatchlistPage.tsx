@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppState } from '../../store/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { getWatchlists, addWatchlistItem, removeWatchlistItem } from '../../services/dataService';
+import { getWatchlists, addWatchlistItem, removeWatchlistItem, createWatchlist } from '../../services/dataService';
 import { EmptyState, Button } from '../common';
 import { formatPrice, formatPercent, formatDate, getChangeColor } from '../../utils/formatters';
 import { Star, Trash2, TrendingUp, AlertTriangle } from 'lucide-react';
@@ -32,6 +32,18 @@ export function WatchlistPage({ onNavigate, onSelectStock }: WatchlistPageProps)
         const watchlists = await getWatchlists(user.id);
         if (watchlists.length > 0 && watchlists[0].watchlist_items) {
           setCloudWatchlist(watchlists[0].watchlist_items);
+        } else if (watchlists.length === 0) {
+          // Create default watchlist if none exists
+          try {
+            await createWatchlist(user.id, 'My Watchlist', 'Default watchlist');
+            // Reload to get the new watchlist
+            const newWatchlists = await getWatchlists(user.id);
+            if (newWatchlists.length > 0) {
+              setCloudWatchlist(newWatchlists[0].watchlist_items || []);
+            }
+          } catch (createError) {
+            console.error('Failed to create default watchlist:', createError);
+          }
         }
       } catch (error) {
         console.error('Failed to load watchlist from cloud:', error);
@@ -45,6 +57,15 @@ export function WatchlistPage({ onNavigate, onSelectStock }: WatchlistPageProps)
 
   // Use cloud watchlist if authenticated, otherwise use localStorage
   const watchlist = user && isConfigured ? cloudWatchlist : state.watchlist;
+
+  // Show loading state FIRST, before checking if empty
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="text-[var(--color-text-muted)]">Loading watchlist...</div>
+      </div>
+    );
+  }
 
   if (watchlist.length === 0) {
     return (
@@ -66,20 +87,13 @@ export function WatchlistPage({ onNavigate, onSelectStock }: WatchlistPageProps)
         setCloudWatchlist(cloudWatchlist.filter(item => item.id !== itemId));
       } catch (error) {
         console.error('Failed to remove from cloud watchlist:', error);
+        window.alert('Failed to remove from watchlist. Please try again.');
       }
     } else {
       // Remove from localStorage
       dispatch({ type: 'REMOVE_FROM_WATCHLIST', payload: symbol });
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <div className="text-[var(--color-text-muted)]">Loading watchlist...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 max-w-5xl">

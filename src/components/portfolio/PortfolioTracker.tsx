@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useAppState } from '../../store/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { getPortfolioAccounts, addTransaction, deleteTransaction } from '../../services/dataService';
+import { getPortfolioAccounts, addTransaction, deleteTransaction, createPortfolioAccount } from '../../services/dataService';
 import { 
   Transaction, 
   calculateHoldings, 
@@ -55,6 +55,54 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
               notes: t.notes || '',
             }));
             setTransactions(mappedTransactions);
+          } else {
+            // Create default portfolio account if none exists
+            try {
+              const newAccount = await createPortfolioAccount(user.id, 'My Portfolio', 'NGN');
+              setCloudAccountId(newAccount.id);
+              
+              // Migrate localStorage data to cloud if exists
+              const saved = localStorage.getItem('predicta_portfolio_transactions');
+              if (saved) {
+                const localTransactions = JSON.parse(saved);
+                if (localTransactions.length > 0) {
+                  // Migrate each transaction
+                  for (const tx of localTransactions) {
+                    try {
+                      await addTransaction(newAccount.id, {
+                        symbol: tx.symbol,
+                        transaction_type: tx.type,
+                        transaction_date: tx.date,
+                        quantity: tx.quantity,
+                        price_per_share: tx.price,
+                        fees: tx.fees || 0,
+                        notes: tx.notes || '',
+                      });
+                    } catch (txError) {
+                      console.error('Failed to migrate transaction:', txError);
+                    }
+                  }
+                  // Reload to get migrated transactions
+                  const reloadedAccounts = await getPortfolioAccounts(user.id);
+                  if (reloadedAccounts.length > 0) {
+                    const reloadedTransactions = reloadedAccounts[0].portfolio_transactions || [];
+                    const mappedTransactions: Transaction[] = reloadedTransactions.map((t: any) => ({
+                      id: t.id,
+                      symbol: t.symbol,
+                      type: t.transaction_type,
+                      date: t.transaction_date,
+                      quantity: parseFloat(t.quantity),
+                      price: parseFloat(t.price_per_share),
+                      fees: parseFloat(t.fees) || 0,
+                      notes: t.notes || '',
+                    }));
+                    setTransactions(mappedTransactions);
+                  }
+                }
+              }
+            } catch (createError) {
+              console.error('Failed to create default portfolio account:', createError);
+            }
           }
         } catch (error) {
           console.error('Failed to load portfolio from cloud:', error);
@@ -73,7 +121,7 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
   }, [user, isConfigured]);
 
   // Save transactions to localStorage and/or cloud
-  const saveTransactions = async (newTransactions: Transaction[]) => {
+  const saveTransactions = async (newTransactions: Transaction[], oldTransactions?: Transaction[]) => {
     setTransactions(newTransactions);
     
     // Always save to localStorage as backup
@@ -82,22 +130,30 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
     // Sync to cloud if authenticated
     if (user && isConfigured && cloudAccountId) {
       try {
-        // For simplicity, we'll just add new transactions
-        // A more sophisticated approach would diff and sync
-        const lastTransaction = newTransactions[newTransactions.length - 1];
-        if (lastTransaction && !lastTransaction.id.startsWith('cloud_')) {
-          await addTransaction(cloudAccountId, {
-            symbol: lastTransaction.symbol,
-            transaction_type: lastTransaction.type,
-            transaction_date: lastTransaction.date,
-            quantity: lastTransaction.quantity,
-            price_per_share: lastTransaction.price,
-            fees: lastTransaction.fees,
-            notes: lastTransaction.notes || '',
-          });
+        // Find new transactions that need to be synced
+        const oldIds = new Set((oldTransactions || []).map(t => t.id));
+        const newTransactionsToSync = newTransactions.filter(t => !oldIds.has(t.id));
+        
+        // Sync each new transaction
+        for (const tx of newTransactionsToSync) {
+          try {
+            const result = await addTransaction(cloudAccountId, {
+              symbol: tx.symbol,
+              transaction_type: tx.type,
+              transaction_date: tx.date,
+              quantity: tx.quantity,
+              price_per_share: tx.price,
+              fees: tx.fees,
+              notes: tx.notes || '',
+            });
+            // Update local transaction with cloud ID
+            tx.id = result.id;
+          } catch (txError) {
+            console.error('Failed to sync transaction to cloud:', txError);
+          }
         }
       } catch (error) {
-        console.error('Failed to sync transaction to cloud:', error);
+        console.error('Failed to sync transactions to cloud:', error);
       }
     }
   };
@@ -138,7 +194,7 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
       }
       
       if (newTransactions.length > 0) {
-        saveTransactions([...transactions, ...newTransactions]);
+        saveTransactions([...transactions, ...newTransactions], transactions);
         setShowImportModal(false);
       }
     };
@@ -149,23 +205,27 @@ export function PortfolioTracker({ onNavigate }: PortfolioProps) {
   const handleLoadSample = () => {
     const csv = generateSampleTransactionCSV();
     const { transactions: newTransactions } = parseTransactionCSV(csv);
-    saveTransactions([...transactions, ...newTransactions]);
+    saveTransactions([...transactions, ...newTransactions], transactions);
     setShowImportModal(false);
   };
 
   // Handle delete transaction
   const handleDeleteTransaction = async (id: string) => {
-    // Delete from cloud if authenticated and it's a cloud transaction
-    if (user && isConfigured && id.startsWith('cloud_')) {
+    // Delete from cloud if authenticated
+    if (user && isConfigured) {
       try {
         await deleteTransaction(id);
       } catch (error) {
         console.error('Failed to delete transaction from cloud:', error);
+        window.alert('Failed to delete transaction. Please try again.');
+        return; // Don't update local state if cloud delete failed
       }
     }
     
     // Delete from local state
-    saveTransactions(transactions.filter(t => t.id !== id));
+    const updatedTransactions = transactions.filter(t => t.id !== id);
+    setTransactions(updatedTransactions);
+    localStorage.setItem('predicta_portfolio_transactions', JSON.stringify(updatedTransactions));
   };
 
   // Handle export
