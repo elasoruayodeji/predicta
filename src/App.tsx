@@ -9,6 +9,9 @@ import { AppShell } from './components/layout/AppShell';
 import { LandingPage } from './components/landing/LandingPage';
 import { AuthPage } from './components/auth/AuthPage';
 import { AuthCallback } from './components/auth/AuthCallback';
+import { VerifyEmailPage } from './components/auth/VerifyEmailPage';
+import { ForgotPasswordPage } from './components/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './components/auth/ResetPasswordPage';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { StockExplorer } from './components/stocks/StockExplorer';
 import { StockDetail } from './components/stocks/StockDetail';
@@ -32,7 +35,7 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState('landing');
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
   const { dispatch } = useAppState();
-  const { user, loading, isConfigured } = useAuth();
+  const { user, loading, isConfigured, isEmailVerified } = useAuth();
 
   const handleSelectStock = (symbol: string) => {
     setSelectedStock(symbol);
@@ -41,9 +44,18 @@ function AppContent() {
   };
 
   const handleNavigate = (page: string) => {
+    // Public routes that don't require authentication
+    const publicRoutes = ['landing', 'auth', 'auth/callback', 'auth/verify-email', 'auth/forgot-password', 'auth/reset-password'];
+    
     // Protect private routes
-    if (!user && isConfigured && page !== 'landing' && page !== 'auth' && page !== 'auth/callback') {
+    if (!user && isConfigured && !publicRoutes.includes(page)) {
       setCurrentPage('auth');
+      return;
+    }
+    
+    // Check email verification for protected routes
+    if (user && isConfigured && !isEmailVerified && !publicRoutes.includes(page) && page !== 'auth/verify-email') {
+      setCurrentPage('auth/verify-email');
       return;
     }
     
@@ -65,17 +77,34 @@ function AppContent() {
     );
   }
 
-  // Handle OAuth callback route
-  if (currentPage === 'auth/callback') {
-    return <AuthCallback onNavigate={handleNavigate} />;
+  // Handle auth-related routes
+  if (currentPage.startsWith('auth/')) {
+    switch (currentPage) {
+      case 'auth/callback':
+        return <AuthCallback onNavigate={handleNavigate} />;
+      case 'auth/verify-email':
+        return <VerifyEmailPage onNavigate={handleNavigate} />;
+      case 'auth/forgot-password':
+        return <ForgotPasswordPage onNavigate={handleNavigate} />;
+      case 'auth/reset-password':
+        return <ResetPasswordPage onNavigate={handleNavigate} />;
+    }
   }
 
   // Show landing page for unauthenticated users
   if (!user && isConfigured && (currentPage === 'landing' || currentPage === 'auth')) {
     if (currentPage === 'auth') {
-      return <AuthPage initialMode={new URLSearchParams(window.location.search).get('mode') === 'signup' ? 'signup' : 'signin'} />;
+      return <AuthPage 
+        initialMode={new URLSearchParams(window.location.search).get('mode') === 'signup' ? 'signup' : 'signin'} 
+        onNavigate={handleNavigate}
+      />;
     }
     return <LandingPage onNavigate={handleNavigate} />;
+  }
+
+  // If authenticated but email not verified, show verification page
+  if (user && isConfigured && !isEmailVerified && currentPage !== 'auth/verify-email') {
+    return <VerifyEmailPage onNavigate={handleNavigate} />;
   }
 
   // If authenticated and on landing/auth page, redirect to dashboard
@@ -88,7 +117,10 @@ function AppContent() {
       case 'landing':
         return <LandingPage onNavigate={handleNavigate} />;
       case 'auth':
-        return <AuthPage initialMode={new URLSearchParams(window.location.search).get('mode') === 'signup' ? 'signup' : 'signin'} />;
+        return <AuthPage 
+          initialMode={new URLSearchParams(window.location.search).get('mode') === 'signup' ? 'signup' : 'signin'} 
+          onNavigate={handleNavigate}
+        />;
       case 'dashboard':
         return <Dashboard onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
       case 'explore':
