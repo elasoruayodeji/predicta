@@ -6,7 +6,9 @@ import { AppProvider, useAppState } from './store/AppContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AppShell } from './components/layout/AppShell';
+import { LandingPage } from './components/landing/LandingPage';
 import { AuthPage } from './components/auth/AuthPage';
+import { AuthCallback } from './components/auth/AuthCallback';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { StockExplorer } from './components/stocks/StockExplorer';
 import { StockDetail } from './components/stocks/StockDetail';
@@ -27,10 +29,29 @@ import { InvestmentCalendar } from './components/calendar/InvestmentCalendar';
 import { Loader2 } from 'lucide-react';
 
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState('landing');
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
   const { dispatch } = useAppState();
   const { user, loading, isConfigured } = useAuth();
+
+  const handleSelectStock = (symbol: string) => {
+    setSelectedStock(symbol);
+    dispatch({ type: 'SET_ACTIVE_SYMBOL', payload: symbol });
+    setCurrentPage('analysis');
+  };
+
+  const handleNavigate = (page: string) => {
+    // Protect private routes
+    if (!user && isConfigured && page !== 'landing' && page !== 'auth' && page !== 'auth/callback') {
+      setCurrentPage('auth');
+      return;
+    }
+    
+    setCurrentPage(page);
+    if (page !== 'analysis') {
+      setSelectedStock(null);
+    }
+  };
 
   // Show loading while checking auth
   if (loading) {
@@ -44,26 +65,30 @@ function AppContent() {
     );
   }
 
-  // Show auth page if not authenticated (but only if Supabase is configured)
-  if (!user && isConfigured) {
-    return <AuthPage />;
+  // Handle OAuth callback route
+  if (currentPage === 'auth/callback') {
+    return <AuthCallback onNavigate={handleNavigate} />;
   }
 
-  const handleSelectStock = (symbol: string) => {
-    setSelectedStock(symbol);
-    dispatch({ type: 'SET_ACTIVE_SYMBOL', payload: symbol });
-    setCurrentPage('analysis');
-  };
-
-  const handleNavigate = (page: string) => {
-    setCurrentPage(page);
-    if (page !== 'analysis') {
-      setSelectedStock(null);
+  // Show landing page for unauthenticated users
+  if (!user && isConfigured && (currentPage === 'landing' || currentPage === 'auth')) {
+    if (currentPage === 'auth') {
+      return <AuthPage initialMode={new URLSearchParams(window.location.search).get('mode') === 'signup' ? 'signup' : 'signin'} />;
     }
-  };
+    return <LandingPage onNavigate={handleNavigate} />;
+  }
+
+  // If authenticated and on landing/auth page, redirect to dashboard
+  if (user && (currentPage === 'landing' || currentPage === 'auth')) {
+    setCurrentPage('dashboard');
+  }
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'landing':
+        return <LandingPage onNavigate={handleNavigate} />;
+      case 'auth':
+        return <AuthPage initialMode={new URLSearchParams(window.location.search).get('mode') === 'signup' ? 'signup' : 'signin'} />;
       case 'dashboard':
         return <Dashboard onNavigate={handleNavigate} onSelectStock={handleSelectStock} />;
       case 'explore':

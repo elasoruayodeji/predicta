@@ -1,20 +1,34 @@
 // ============================================================
 // Authentication Page - Login/Signup
 // ============================================================
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../common';
-import { Mail, Lock, User, AlertCircle, Loader2, TrendingUp } from 'lucide-react';
+import { Mail, Lock, User, AlertCircle, Loader2, TrendingUp, Eye, EyeOff } from 'lucide-react';
 
-export function AuthPage() {
-  const { signIn, signUp, isConfigured } = useAuth();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+interface AuthPageProps {
+  initialMode?: 'signin' | 'signup';
+}
+
+export function AuthPage({ initialMode = 'signin' }: AuthPageProps) {
+  const { signIn, signUp, signInWithGoogle, isConfigured } = useAuth();
+  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Handle URL parameters for mode
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlMode = params.get('mode');
+    if (urlMode === 'signup' || urlMode === 'signin') {
+      setMode(urlMode);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +64,25 @@ export function AuthPage() {
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      const { error } = await signInWithGoogle();
+      
+      if (error) {
+        setError(error.message || 'Failed to sign in with Google');
+        setLoading(false);
+      }
+      // Success is handled by OAuth callback redirect
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
       setLoading(false);
     }
   };
@@ -140,15 +173,34 @@ export function AuthPage() {
               <div className="relative">
                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
                   minLength={6}
-                  className="w-full pl-10 pr-4 py-2.5 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-blue)]/50"
+                  className="w-full pl-10 pr-12 py-2.5 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-blue)]/50"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
+              {mode === 'signin' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    // TODO: Implement forgot password flow
+                    alert('Forgot password feature coming soon');
+                  }}
+                  className="text-xs text-[var(--color-accent-blue)] hover:underline mt-1"
+                >
+                  Forgot password?
+                </button>
+              )}
             </div>
 
             {error && (
@@ -179,6 +231,47 @@ export function AuthPage() {
               ) : (
                 mode === 'signin' ? 'Sign In' : 'Create Account'
               )}
+            </Button>
+
+            {/* Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[var(--color-border-primary)]"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-[var(--color-bg-secondary)] px-2 text-[var(--color-text-muted)]">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
+            {/* Google Sign-In Button */}
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full"
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+            >
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
+              {loading ? 'Connecting...' : 'Sign in with Google'}
             </Button>
           </form>
 

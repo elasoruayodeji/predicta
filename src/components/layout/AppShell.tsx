@@ -39,6 +39,12 @@ export function AppShell({ children, currentPage, onNavigate }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, signOut, isConfigured } = useAuth();
 
+  const handleSignOut = async () => {
+    await signOut();
+    // Clear any user-specific state
+    onNavigate('landing');
+  };
+
   return (
     <div className="flex h-screen bg-[var(--color-bg-primary)] overflow-hidden">
       {/* Mobile overlay */}
@@ -149,7 +155,7 @@ export function AppShell({ children, currentPage, onNavigate }: AppShellProps) {
                   </span>
                 </div>
                 <button
-                  onClick={() => signOut()}
+                  onClick={handleSignOut}
                   className="p-2 rounded-lg hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
                   title="Sign out"
                 >
