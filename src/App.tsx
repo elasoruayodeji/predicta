@@ -3,6 +3,8 @@
 // ============================================================
 import React, { useState } from 'react';
 import { AppProvider, useAppState } from './store/AppContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { AppShell } from './components/layout/AppShell';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { StockExplorer } from './components/stocks/StockExplorer';
@@ -93,8 +95,12 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <AppProvider>
+          <AppContent />
+        </AppProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
