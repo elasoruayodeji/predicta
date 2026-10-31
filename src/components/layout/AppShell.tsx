@@ -2,10 +2,11 @@
 // Application Shell - Layout, Navigation, Header
 // ============================================================
 import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   LayoutDashboard, Search, LineChart, FlaskConical, AlertTriangle, 
   FileText, Star, Settings, Menu, X, ChevronRight, Database, TrendingUp, Filter,
-  PieChart, Calculator, BookOpen, Zap, Bell, Calendar
+  PieChart, Calculator, BookOpen, Zap, Bell, Calendar, LogOut, User, Cloud, CloudOff
 } from 'lucide-react';
 
 interface AppShellProps {
@@ -36,6 +37,7 @@ const navItems = [
 
 export function AppShell({ children, currentPage, onNavigate }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, signOut, isConfigured } = useAuth();
 
   return (
     <div className="flex h-screen bg-[var(--color-bg-primary)] overflow-hidden">
@@ -121,8 +123,40 @@ export function AppShell({ children, currentPage, onNavigate }: AppShellProps) {
             </h2>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Connection status shown on dashboard */}
+          <div className="flex items-center gap-3">
+            {/* Cloud connection status */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)]">
+              {isConfigured ? (
+                <>
+                  <Cloud size={14} className="text-[var(--color-positive)]" />
+                  <span className="text-xs text-[var(--color-text-secondary)]">Cloud Sync</span>
+                </>
+              ) : (
+                <>
+                  <CloudOff size={14} className="text-[var(--color-warning)]" />
+                  <span className="text-xs text-[var(--color-text-secondary)]">Local Only</span>
+                </>
+              )}
+            </div>
+
+            {/* User info and sign out */}
+            {user && (
+              <div className="flex items-center gap-2">
+                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)]">
+                  <User size={14} className="text-[var(--color-text-muted)]" />
+                  <span className="text-xs text-[var(--color-text-secondary)] max-w-[150px] truncate">
+                    {user.email}
+                  </span>
+                </div>
+                <button
+                  onClick={() => signOut()}
+                  className="p-2 rounded-lg hover:bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                  title="Sign out"
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
