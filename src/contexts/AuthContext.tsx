@@ -14,7 +14,10 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
+  updatePassword: (newPassword: string) => Promise<{ error: any }>;
+  resendVerificationEmail: (email: string) => Promise<{ error: any }>;
   isConfigured: boolean;
+  isEmailVerified: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -100,11 +103,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth/reset-password`,
     });
 
     return { error };
   };
+
+  const updatePassword = async (newPassword: string) => {
+    if (!isSupabaseConfigured()) {
+      return { error: { message: 'Supabase not configured' } };
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    return { error };
+  };
+
+  const resendVerificationEmail = async (email: string) => {
+    if (!isSupabaseConfigured()) {
+      return { error: { message: 'Supabase not configured' } };
+    }
+
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+    });
+
+    return { error };
+  };
+
+  // Check if user's email is verified
+  const isEmailVerified = user?.email_confirmed_at !== undefined;
 
   const value = {
     user,
@@ -115,7 +146,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signInWithGoogle,
     signOut,
     resetPassword,
+    updatePassword,
+    resendVerificationEmail,
     isConfigured: isSupabaseConfigured(),
+    isEmailVerified,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

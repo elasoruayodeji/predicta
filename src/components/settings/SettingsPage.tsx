@@ -290,16 +290,40 @@ export function SettingsPage() {
                     <label className="text-xs text-[var(--color-text-muted)] block mb-1.5">Email Address</label>
                     <input
                       type="email"
-                      value={profileForm.userEmail}
-                      onChange={(e) => {
-                        setProfileForm({ ...profileForm, userEmail: e.target.value });
-                      }}
-                      placeholder="your@email.com"
+                      value={user?.email || profileForm.userEmail}
                       disabled
                       className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-lg text-sm text-[var(--color-text-muted)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-blue)]/50 opacity-60 cursor-not-allowed"
                     />
-                    <p className="text-[10px] text-[var(--color-text-muted)] mt-1">Email cannot be changed here</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {user?.email_confirmed_at ? (
+                        <span className="text-[10px] text-[var(--color-positive)] flex items-center gap-1">
+                          <CheckCircle size={10} />
+                          Verified
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-[var(--color-warning)] flex items-center gap-1">
+                          <AlertCircle size={10} />
+                          Not verified
+                        </span>
+                      )}
+                      <span className="text-[10px] text-[var(--color-text-muted)]">
+                        Email changes require verification
+                      </span>
+                    </div>
                   </div>
+
+                  {user?.created_at && (
+                    <div>
+                      <label className="text-xs text-[var(--color-text-muted)] block mb-1.5">Account Created</label>
+                      <p className="text-sm text-[var(--color-text-primary)]">
+                        {new Date(user.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                  )}
                   
                   <div className="pt-2">
                     <Button

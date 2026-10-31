@@ -8,9 +8,10 @@ import { Mail, Lock, User, AlertCircle, Loader2, TrendingUp, Eye, EyeOff } from 
 
 interface AuthPageProps {
   initialMode?: 'signin' | 'signup';
+  onNavigate?: (page: string) => void;
 }
 
-export function AuthPage({ initialMode = 'signin' }: AuthPageProps) {
+export function AuthPage({ initialMode = 'signin', onNavigate }: AuthPageProps) {
   const { signIn, signUp, signInWithGoogle, isConfigured } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
@@ -189,13 +190,10 @@ export function AuthPage({ initialMode = 'signin' }: AuthPageProps) {
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {mode === 'signin' && (
+              {mode === 'signin' && onNavigate && (
                 <button
                   type="button"
-                  onClick={() => {
-                    // TODO: Implement forgot password flow
-                    alert('Forgot password feature coming soon');
-                  }}
+                  onClick={() => onNavigate('auth/forgot-password')}
                   className="text-xs text-[var(--color-accent-blue)] hover:underline mt-1"
                 >
                   Forgot password?
