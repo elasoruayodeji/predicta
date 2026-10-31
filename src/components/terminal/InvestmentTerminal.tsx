@@ -1,14 +1,16 @@
 // ============================================================
 // Investment Terminal - Main Workspace
 // ============================================================
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppState } from '../../store/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatPrice, formatPercent, formatVolume, getChangeColor, formatDate } from '../../utils/formatters';
 import { MarketMovers } from '../dashboard/MarketMovers';
+import { fetchInvestoIndices } from '../../services/investoClient';
 import { 
   Search, TrendingUp, TrendingDown, Activity, BarChart3, 
-  ArrowUpRight, ArrowDownRight, Clock, Star, Zap, Target
+  ArrowUpRight, ArrowDownRight, Clock, Star, Zap, Target,
+  AlertTriangle, Loader2, Globe
 } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
@@ -23,13 +25,39 @@ export function InvestmentTerminal({ onNavigate, onSelectStock }: InvestmentTerm
   const datasets = Array.from(state.datasets.values());
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Market indices (simulated - in production would come from API)
-  const marketIndices = useMemo(() => {
-    return [
-      { name: 'NGX ASI', value: 68542.31, change: 1.24, changePercent: 0.018 },
-      { name: 'NGX 30', value: 4218.76, change: -0.87, changePercent: -0.021 },
-      { name: 'Premium Board', value: 12453.92, change: 0.56, changePercent: 0.0045 },
-    ];
+  // Market indices from Investo API
+  const [marketIndices, setMarketIndices] = useState<any[]>([]);
+  const [indicesLoading, setIndicesLoading] = useState(true);
+  const [indicesError, setIndicesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadIndices = async () => {
+      try {
+        setIndicesLoading(true);
+        const result = await fetchInvestoIndices();
+        if (result.ok) {
+          // Map API response to display format
+          const indices = result.data.map((idx: any) => ({
+            name: idx.name || idx.code,
+            value: idx.level || idx.value || 0,
+            change: idx.change || 0,
+            changePercent: idx.change_percent || 0,
+          }));
+          setMarketIndices(indices);
+          setIndicesError(null);
+        } else {
+          setIndicesError(result.error?.message || 'Failed to load market indices');
+          setMarketIndices([]);
+        }
+      } catch (error) {
+        setIndicesError('Failed to connect to market data service');
+        setMarketIndices([]);
+      } finally {
+        setIndicesLoading(false);
+      }
+    };
+
+    loadIndices();
   }, []);
 
   // Market breadth
@@ -153,29 +181,50 @@ export function InvestmentTerminal({ onNavigate, onSelectStock }: InvestmentTerm
 
       {/* Market Indices */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {marketIndices.map((index, idx) => (
-          <div key={idx} className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{index.name}</p>
-                <p className="text-xl font-bold text-[var(--color-text-primary)] font-mono mt-1">
-                  {index.value.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
-              <BarChart3 size={20} className="text-[var(--color-accent-blue)]" />
-            </div>
-            <div className="flex items-center gap-2">
-              {index.change >= 0 ? (
-                <TrendingUp size={14} className="text-[var(--color-positive)]" />
-              ) : (
-                <TrendingDown size={14} className="text-[var(--color-negative)]" />
-              )}
-              <span className={`text-sm font-mono font-semibold ${getChangeColor(index.change)}`}>
-                {index.change >= 0 ? '+' : ''}{index.change.toFixed(2)} ({index.changePercent >= 0 ? '+' : ''}{(index.changePercent * 100).toFixed(2)}%)
-              </span>
-            </div>
+        {indicesLoading ? (
+          <div className="col-span-3 flex items-center justify-center py-8">
+            <Loader2 size={24} className="animate-spin text-[var(--color-accent-blue)]" />
+            <span className="ml-2 text-sm text-[var(--color-text-muted)]">Loading market indices...</span>
           </div>
-        ))}
+        ) : indicesError ? (
+          <div className="col-span-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
+            <div className="flex items-center gap-2 text-[var(--color-negative)]">
+              <AlertTriangle size={16} />
+              <span className="text-sm">{indicesError}</span>
+            </div>
+            <p className="text-xs text-[var(--color-text-muted)] mt-2">
+              Market indices data is currently unavailable. Please check your connection or try again later.
+            </p>
+          </div>
+        ) : marketIndices.length === 0 ? (
+          <div className="col-span-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
+            <p className="text-sm text-[var(--color-text-muted)]">No market indices data available</p>
+          </div>
+        ) : (
+          marketIndices.map((index, idx) => (
+            <div key={idx} className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{index.name}</p>
+                  <p className="text-xl font-bold text-[var(--color-text-primary)] font-mono mt-1">
+                    {index.value.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <BarChart3 size={20} className="text-[var(--color-accent-blue)]" />
+              </div>
+              <div className="flex items-center gap-2">
+                {index.change >= 0 ? (
+                  <TrendingUp size={14} className="text-[var(--color-positive)]" />
+                ) : (
+                  <TrendingDown size={14} className="text-[var(--color-negative)]" />
+                )}
+                <span className={`text-sm font-mono font-semibold ${getChangeColor(index.change)}`}>
+                  {index.change >= 0 ? '+' : ''}{index.change.toFixed(2)} ({index.changePercent >= 0 ? '+' : ''}{(index.changePercent * 100).toFixed(2)}%)
+                </span>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Market Breadth */}

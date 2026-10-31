@@ -37,6 +37,7 @@ import { Loader2 } from 'lucide-react';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('landing');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
   const { dispatch } = useAppState();
   const { user, loading, isConfigured, isEmailVerified } = useAuth();
@@ -48,23 +49,36 @@ function AppContent() {
   };
 
   const handleNavigate = (page: string) => {
+    // Parse query parameters from page string (e.g., 'auth?mode=signup')
+    const [basePage, queryString] = page.split('?');
+    const params = new URLSearchParams(queryString || '');
+    
+    // Handle auth mode parameter
+    if (basePage === 'auth') {
+      const mode = params.get('mode');
+      if (mode === 'signup' || mode === 'signin') {
+        setAuthMode(mode);
+      }
+    }
+    
     // Public routes that don't require authentication
     const publicRoutes = ['landing', 'auth', 'auth/callback', 'auth/verify-email', 'auth/forgot-password', 'auth/reset-password'];
     
     // Protect private routes
-    if (!user && isConfigured && !publicRoutes.includes(page)) {
+    if (!user && isConfigured && !publicRoutes.includes(basePage)) {
       setCurrentPage('auth');
+      setAuthMode('signin');
       return;
     }
     
     // Check email verification for protected routes
-    if (user && isConfigured && !isEmailVerified && !publicRoutes.includes(page) && page !== 'auth/verify-email') {
+    if (user && isConfigured && !isEmailVerified && !publicRoutes.includes(basePage) && basePage !== 'auth/verify-email') {
       setCurrentPage('auth/verify-email');
       return;
     }
     
-    setCurrentPage(page);
-    if (page !== 'analysis') {
+    setCurrentPage(basePage);
+    if (basePage !== 'analysis') {
       setSelectedStock(null);
     }
   };
@@ -99,7 +113,7 @@ function AppContent() {
   if (!user && isConfigured) {
     if (currentPage === 'auth') {
       return <AuthPage 
-        initialMode={new URLSearchParams(window.location.search).get('mode') === 'signup' ? 'signup' : 'signin'} 
+        initialMode={authMode}
         onNavigate={handleNavigate}
       />;
     }
