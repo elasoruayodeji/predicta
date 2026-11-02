@@ -219,7 +219,7 @@ export function InvestmentTerminal({ onNavigate, onSelectStock }: InvestmentTerm
                   <TrendingDown size={14} className="text-[var(--color-negative)]" />
                 )}
                 <span className={`text-sm font-mono font-semibold ${getChangeColor(index.change)}`}>
-                  {index.change >= 0 ? '+' : ''}{index.change.toFixed(2)} ({index.changePercent >= 0 ? '+' : ''}{(index.changePercent * 100).toFixed(2)}%)
+                  {index.change >= 0 ? '+' : ''}{index.change.toFixed(2)} ({index.changePercent >= 0 ? '+' : ''}{index.changePercent.toFixed(2)}%)
                 </span>
               </div>
             </div>
