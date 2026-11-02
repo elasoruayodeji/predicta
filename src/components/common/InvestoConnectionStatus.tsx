@@ -6,12 +6,13 @@
 // ============================================================
 
 import React, { useState, useEffect } from 'react';
-import { checkInvestoHealth } from '../../services/investoClient';
-import { Cloud, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { checkInvestoHealth, fetchInvestoIndices } from '../../services/investoClient';
+import { Cloud, CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 
 export function InvestoConnectionStatus() {
-  const [status, setStatus] = useState<'checking' | 'connected' | 'not_configured' | 'error'>('checking');
+  const [status, setStatus] = useState<'checking' | 'connected' | 'not_configured' | 'error' | 'no_data'>('checking');
   const [lastChecked, setLastChecked] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     checkStatus();
@@ -20,19 +21,38 @@ export function InvestoConnectionStatus() {
   const checkStatus = async () => {
     setStatus('checking');
     try {
+      // First check server health
       const health = await checkInvestoHealth();
-      if (health.ok && health.investoConfigured) {
-        setStatus('connected');
-      } else if (health.ok && !health.investoConfigured) {
-        setStatus('not_configured');
-      } else {
+      if (!health.ok) {
         setStatus('error');
+        setLastChecked(new Date().toLocaleTimeString());
+        return;
+      }
+
+      if (!health.investoConfigured) {
+        setStatus('not_configured');
+        setLastChecked(new Date().toLocaleTimeString());
+        return;
+      }
+
+      // Then verify actual market data availability
+      const indicesResult = await fetchInvestoIndices();
+      if (indicesResult.ok && indicesResult.data && indicesResult.data.length > 0) {
+        setStatus('connected');
+      } else {
+        setStatus('no_data');
       }
       setLastChecked(new Date().toLocaleTimeString());
     } catch {
       setStatus('error');
       setLastChecked(new Date().toLocaleTimeString());
     }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await checkStatus();
+    setIsRefreshing(false);
   };
 
   const statusConfig = {
@@ -54,6 +74,12 @@ export function InvestoConnectionStatus() {
       bgColor: 'bg-[var(--color-warning-dim)]',
       label: 'API Key Not Configured',
     },
+    no_data: {
+      icon: <AlertCircle size={14} />,
+      color: 'text-[var(--color-warning)]',
+      bgColor: 'bg-[var(--color-warning-dim)]',
+      label: 'No Market Data Available',
+    },
     error: {
       icon: <XCircle size={14} />,
       color: 'text-[var(--color-negative)]',
@@ -72,6 +98,16 @@ export function InvestoConnectionStatus() {
         <span className="text-[10px] text-[var(--color-text-muted)]">
           · {lastChecked}
         </span>
+      )}
+      {status !== 'checking' && (
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="ml-1 p-1 rounded hover:bg-black/10 transition-colors disabled:opacity-50"
+          title="Refresh connection status"
+        >
+          <RefreshCw size={12} className={`${config.color} ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
       )}
     </div>
   );
