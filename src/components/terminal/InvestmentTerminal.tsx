@@ -31,34 +31,34 @@ export function InvestmentTerminal({ onNavigate, onSelectStock }: InvestmentTerm
   const [indicesError, setIndicesError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadIndices = async () => {
-      try {
-        setIndicesLoading(true);
-        const result = await fetchInvestoIndices();
-        if (result.ok) {
-          // Map API response to display format
-          const indices = result.data.map((idx: any) => ({
-            name: idx.name || idx.code,
-            value: idx.level || idx.value || 0,
-            change: idx.change || 0,
-            changePercent: idx.change_percent || 0,
-          }));
-          setMarketIndices(indices);
-          setIndicesError(null);
-        } else {
-          setIndicesError(result.error?.message || 'Failed to load market indices');
-          setMarketIndices([]);
-        }
-      } catch (error) {
-        setIndicesError('Failed to connect to market data service');
-        setMarketIndices([]);
-      } finally {
-        setIndicesLoading(false);
-      }
-    };
-
     loadIndices();
   }, []);
+
+  const loadIndices = async () => {
+    try {
+      setIndicesLoading(true);
+      setIndicesError(null);
+      const result = await fetchInvestoIndices();
+      if (result.ok) {
+        // Map API response to display format
+        // Note: change_percent is already in percentage form (e.g., 0.22 = 0.22%)
+        const indices = result.data.map((idx: any) => ({
+          name: idx.name || idx.code,
+          value: idx.level || idx.value || 0,
+          changePercent: idx.change_percent || 0,
+        }));
+        setMarketIndices(indices);
+      } else {
+        setIndicesError(result.error?.message || 'Failed to load market indices');
+        setMarketIndices([]);
+      }
+    } catch (error) {
+      setIndicesError('Failed to connect to market data service');
+      setMarketIndices([]);
+    } finally {
+      setIndicesLoading(false);
+    }
+  };
 
   // Market breadth
   const marketBreadth = useMemo(() => {
@@ -180,51 +180,70 @@ export function InvestmentTerminal({ onNavigate, onSelectStock }: InvestmentTerm
       </div>
 
       {/* Market Indices */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {indicesLoading ? (
-          <div className="col-span-3 flex items-center justify-center py-8">
-            <Loader2 size={24} className="animate-spin text-[var(--color-accent-blue)]" />
-            <span className="ml-2 text-sm text-[var(--color-text-muted)]">Loading market indices...</span>
-          </div>
-        ) : indicesError ? (
-          <div className="col-span-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
-            <div className="flex items-center gap-2 text-[var(--color-negative)]">
-              <AlertTriangle size={16} />
-              <span className="text-sm">{indicesError}</span>
+      <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Market Indices</h3>
+          <button
+            onClick={loadIndices}
+            disabled={indicesLoading}
+            className="text-xs text-[var(--color-accent-blue)] hover:underline flex items-center gap-1 disabled:opacity-50"
+          >
+            <Loader2 size={12} className={indicesLoading ? 'animate-spin' : ''} />
+            {indicesLoading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {indicesLoading && marketIndices.length === 0 ? (
+            <div className="col-span-3 flex items-center justify-center py-8">
+              <Loader2 size={24} className="animate-spin text-[var(--color-accent-blue)]" />
+              <span className="ml-2 text-sm text-[var(--color-text-muted)]">Loading market indices...</span>
             </div>
-            <p className="text-xs text-[var(--color-text-muted)] mt-2">
-              Market indices data is currently unavailable. Please check your connection or try again later.
-            </p>
-          </div>
-        ) : marketIndices.length === 0 ? (
-          <div className="col-span-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
-            <p className="text-sm text-[var(--color-text-muted)]">No market indices data available</p>
-          </div>
-        ) : (
-          marketIndices.map((index, idx) => (
-            <div key={idx} className="bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded-xl p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{index.name}</p>
-                  <p className="text-xl font-bold text-[var(--color-text-primary)] font-mono mt-1">
-                    {index.value.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
+          ) : indicesError ? (
+            <div className="col-span-3 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-xl p-4">
+              <div className="flex items-center gap-2 text-[var(--color-negative)]">
+                <AlertTriangle size={16} />
+                <span className="text-sm">{indicesError}</span>
+              </div>
+              <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                Market indices data is currently unavailable. Please check your connection or try again later.
+              </p>
+              <button
+                onClick={loadIndices}
+                className="mt-3 px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-accent-blue)] text-white hover:bg-[var(--color-accent-blue-dim)] transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : marketIndices.length === 0 ? (
+            <div className="col-span-3 bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-xl p-4">
+              <p className="text-sm text-[var(--color-text-muted)]">No market indices data available</p>
+            </div>
+          ) : (
+            marketIndices.map((index, idx) => (
+              <div key={idx} className="bg-[var(--color-bg-tertiary)] border border-[var(--color-border-primary)] rounded-xl p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">{index.name}</p>
+                    <p className="text-xl font-bold text-[var(--color-text-primary)] font-mono mt-1">
+                      {index.value.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <BarChart3 size={20} className="text-[var(--color-accent-blue)]" />
                 </div>
-                <BarChart3 size={20} className="text-[var(--color-accent-blue)]" />
+                <div className="flex items-center gap-2">
+                  {index.changePercent >= 0 ? (
+                    <TrendingUp size={14} className="text-[var(--color-positive)]" />
+                  ) : (
+                    <TrendingDown size={14} className="text-[var(--color-negative)]" />
+                  )}
+                  <span className={`text-sm font-mono font-semibold ${getChangeColor(index.changePercent)}`}>
+                    {index.changePercent >= 0 ? '+' : ''}{index.changePercent.toFixed(2)}%
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                {index.change >= 0 ? (
-                  <TrendingUp size={14} className="text-[var(--color-positive)]" />
-                ) : (
-                  <TrendingDown size={14} className="text-[var(--color-negative)]" />
-                )}
-                <span className={`text-sm font-mono font-semibold ${getChangeColor(index.change)}`}>
-                  {index.change >= 0 ? '+' : ''}{index.change.toFixed(2)} ({index.changePercent >= 0 ? '+' : ''}{index.changePercent.toFixed(2)}%)
-                </span>
-              </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
 
       {/* Market Breadth */}
