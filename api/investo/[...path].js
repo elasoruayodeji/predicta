@@ -43,6 +43,14 @@ function isValidDate(dateStr) {
 }
 
 export default async function handler(req, res) {
+  // Diagnostic logging (safe - no sensitive data)
+  console.log('[Investo Proxy] Request received:', {
+    method: req.method,
+    url: req.url,
+    query: req.query,
+    path: req.query?.path
+  });
+
   // Set security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -51,6 +59,7 @@ export default async function handler(req, res) {
   // Check API key
   const apiKey = process.env.INVESTO_API_KEY;
   if (!apiKey) {
+    console.error('[Investo Proxy] API key not configured');
     return res.status(503).json({
       ok: false,
       error: {
@@ -71,13 +80,35 @@ export default async function handler(req, res) {
     });
   }
 
-  // Extract path after /api/investo (remove query string first)
-  const fullPath = req.url || '';
-  const pathWithoutQuery = fullPath.split('?')[0];
-  const subPath = pathWithoutQuery.replace(/^\/api\/investo/, '') || '/';
+  // Extract path from Vercel catch-all route parameter
+  // req.query.path is an array of path segments for [...path] routes
+  let subPath = '';
+  
+  if (Array.isArray(req.query?.path)) {
+    // Reconstruct path from array: ['indices'] -> '/indices'
+    subPath = '/' + req.query.path.join('/');
+  } else if (typeof req.query?.path === 'string') {
+    // Single segment: 'indices' -> '/indices'
+    subPath = '/' + req.query.path;
+  } else {
+    // Fallback: try to extract from req.url
+    const fullPath = req.url || '';
+    const pathWithoutQuery = fullPath.split('?')[0];
+    subPath = pathWithoutQuery.replace(/^\/api\/investo/, '') || '/';
+  }
+
+  // Normalize: ensure leading slash, remove trailing slash
+  subPath = '/' + subPath.replace(/^\/+/, '').replace(/\/+$/, '');
+  
+  // Remove query string if present (shouldn't be, but just in case)
+  subPath = subPath.split('?')[0];
+
+  console.log('[Investo Proxy] Extracted subPath:', subPath);
+
   const classified = classifyRoute(subPath);
 
   if (!classified) {
+    console.warn('[Investo Proxy] No route matched for subPath:', subPath);
     return res.status(404).json({
       ok: false,
       error: {
@@ -88,6 +119,7 @@ export default async function handler(req, res) {
   }
 
   const { route, match } = classified;
+  console.log('[Investo Proxy] Route matched:', route.upstream);
 
   // Build upstream URL
   let upstreamPath = route.upstream;
